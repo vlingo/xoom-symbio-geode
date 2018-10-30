@@ -15,7 +15,7 @@ import io.vlingo.actors.testkit.TestUntil;
 import io.vlingo.symbio.State;
 import io.vlingo.symbio.store.state.StateStore.ConfirmDispatchedResultInterest;
 import io.vlingo.symbio.store.state.StateStore.ReadResultInterest;
-import io.vlingo.symbio.store.state.StateStore.Result;
+import io.vlingo.symbio.store.Result;
 import io.vlingo.symbio.store.state.StateStore.WriteResultInterest;
 
 public class MockObjectResultInterest
