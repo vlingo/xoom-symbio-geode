@@ -27,7 +27,7 @@
         },
         {
             "includePattern": "pom.xml",
-            "uploadPattern": "/io/vlingo/vlingo-symbio-jdbc/0.7.1/vlingo-symbio-geode-0.7.4.pom",
+            "uploadPattern": "/io/vlingo/vlingo-symbio-geode/0.7.4/vlingo-symbio-geode-0.7.4.pom",
             "matrixParams": {
                 "override": 1
             }
