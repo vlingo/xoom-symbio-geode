@@ -20,9 +20,6 @@ import io.vlingo.symbio.State;
  * {@link State}. This implementation delegates to an appropriate
  * kind of {@link PdxSerializer}, as determined by the serializer
  * registry {@link StatePdxSerializerRegistry}.
- *
- * @author davem
- * @since Oct 13, 2018
  */
 public class StatePdxSerializer implements PdxSerializer, Declarable {
   
@@ -44,7 +41,7 @@ public class StatePdxSerializer implements PdxSerializer, Declarable {
     return serializerFor(clazz).fromData(clazz, in);
   }
 
-  private PdxSerializer serializerFor(Object o) {
+  private PdxSerializer serializerFor(final Object o) {
     return serializerFor(o.getClass());
   }
   

@@ -22,9 +22,6 @@ import io.vlingo.symbio.store.state.StateTypeStateStoreMap;
 /**
  * GeodeStateStoreActor is responsible for reading and writing
  * objects from/to a GemFire cache.
- *
- * @author davem
- * @since Oct 14, 2018
  */
 public class GeodeStateStoreActor extends Actor implements ObjectStateStore, DispatcherControl {
   
