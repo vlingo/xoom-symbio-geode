@@ -14,13 +14,10 @@ import org.apache.geode.cache.client.ClientCacheFactory;
  * GemFireCacheProvider is responsible for vending an appropriate
  * instance of {@link GemFireCache} based on a specified
  * {@link Configuration}.
- *
- * @author davem
- * @since Oct 14, 2018
  */
 public class GemFireCacheProvider {
 
-  public static GemFireCache getAnyInstance(Configuration config) throws CouldNotAccessCacheException {
+  public static GemFireCache getAnyInstance(final Configuration config) throws CouldNotAccessCacheException {
     return config.role.isPeer() ? serverCache() : clientCache();
   }
 

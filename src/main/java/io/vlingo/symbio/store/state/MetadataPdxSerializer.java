@@ -16,9 +16,6 @@ import io.vlingo.symbio.Metadata;
  * MetadataPdxSerializer is responsible for serializing instances of
  * {@link Metadata}. It is necessary to customize the PDX serialization
  * of {@link Metadata} to avoid serializing {@link Metadata#EmptyObject}.
- *
- * @author davem
- * @since Oct 13, 2018
  */
 public class MetadataPdxSerializer implements PdxSerializer, Declarable {
 

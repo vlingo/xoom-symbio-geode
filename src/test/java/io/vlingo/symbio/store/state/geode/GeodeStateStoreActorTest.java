@@ -34,9 +34,6 @@ import io.vlingo.symbio.store.state.StatePdxSerializerRegistry;
 import io.vlingo.symbio.store.state.StateTypeStateStoreMap;
 /**
  * GemFireStateStoreTest is responsible for testing {@link GeodeStateStoreActor}.
- *
- * @author davem
- * @since Oct 14, 2018
  */
 public class GeodeStateStoreActorTest {
   private final static String StoreName = Entity1.class.getSimpleName();

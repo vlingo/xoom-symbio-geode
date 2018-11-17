@@ -17,27 +17,24 @@ import org.apache.geode.pdx.ReflectionBasedAutoSerializer;
  * {@link PdxSerializer} on a per domain-type basis, and for vending
  * an appropriate instance of {@link PdxSerializer} for a given
  * fully-qualified class name.
- *
- * @author davem
- * @since Oct 13, 2018
  */
 public class StatePdxSerializerRegistry {
   
   private static final Map<String, String> SerializerClassByType = new ConcurrentHashMap<>();
 
-  public static void serializeTypeWith(String typeFQCN, String serializerFQCN) {
+  public static void serializeTypeWith(final String typeFQCN, final String serializerFQCN) {
     SerializerClassByType.putIfAbsent(typeFQCN, serializerFQCN);
   }
 
-  public static void serializeTypeWith(Class<?> type, Class<?> pdxSerializerClass) {
+  public static void serializeTypeWith(final Class<?> type, final Class<?> pdxSerializerClass) {
     serializeTypeWith(type.getName(), pdxSerializerClass.getName());
   }
   
-  public static PdxSerializer serializerForType(Class<?> clazz) {
+  public static PdxSerializer serializerForType(final Class<?> clazz) {
     return serializerForType(clazz.getName());
   }
 
-  public static PdxSerializer serializerForType(String typeFQCN) {
+  public static PdxSerializer serializerForType(final String typeFQCN) {
     PdxSerializer serializer = null;
     String serializerFQCN = SerializerClassByType.get(typeFQCN);
     if (serializerFQCN != null) {

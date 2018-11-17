@@ -8,9 +8,6 @@ package io.vlingo.symbio.store.state.geode;
 /**
  * Configuration is responsible for maintaining the configuration
  * for a {@link GeodeStateStoreActor}.
- *
- * @author davem
- * @since Oct 14, 2018
  */
 public class Configuration {
   
