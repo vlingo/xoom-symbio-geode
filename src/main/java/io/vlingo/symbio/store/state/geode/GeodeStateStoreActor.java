@@ -13,9 +13,12 @@ import org.apache.geode.cache.GemFireCache;
 import org.apache.geode.cache.Region;
 
 import io.vlingo.actors.Actor;
+import io.vlingo.common.Failure;
+import io.vlingo.common.Success;
 import io.vlingo.symbio.State;
 import io.vlingo.symbio.State.NullState;
 import io.vlingo.symbio.store.Result;
+import io.vlingo.symbio.store.StorageException;
 import io.vlingo.symbio.store.state.ObjectStateStore;
 import io.vlingo.symbio.store.state.StateStore.DispatcherControl;
 import io.vlingo.symbio.store.state.StateTypeStateStoreMap;
@@ -29,7 +32,7 @@ public class GeodeStateStoreActor extends Actor implements ObjectStateStore, Dis
   
   private final List<Dispatchable<Object>> dispatchables;
   private final ObjectDispatcher dispatcher;
-  private final Configuration configuration;
+  //private final Configuration configuration;
   private final GemFireCache cache;
 
   public GeodeStateStoreActor(final ObjectDispatcher aDispatcher, final Configuration aConfiguration) {
@@ -43,7 +46,7 @@ public class GeodeStateStoreActor extends Actor implements ObjectStateStore, Dis
     if (aConfiguration == null) {
       throw new IllegalArgumentException("Configuration must not be null.");
     }
-    this.configuration = aConfiguration;
+    //this.configuration = aConfiguration;
     
     this.cache = GemFireCacheProvider.getAnyInstance(aConfiguration);
 
@@ -93,8 +96,7 @@ public class GeodeStateStoreActor extends Actor implements ObjectStateStore, Dis
       
       if (id == null || type == null) {
         interest.readResultedIn(
-          Result.Error,
-          new IllegalArgumentException(id == null ? "The id is null." : "The type is null."),
+          Failure.of(new StorageException(Result.Error, id == null ? "The id is null." : "The type is null.")),
           id,
           EMPTY_STATE,
           object);
@@ -106,8 +108,7 @@ public class GeodeStateStoreActor extends Actor implements ObjectStateStore, Dis
 
       if (storeName == null) {
         interest.readResultedIn(
-          Result.NoTypeStore,
-          new IllegalStateException("No type store."),
+          Failure.of(new StorageException(Result.NoTypeStore, "No type store.")),
           id,
           EMPTY_STATE,
           object);
@@ -119,8 +120,7 @@ public class GeodeStateStoreActor extends Actor implements ObjectStateStore, Dis
 
       if (typeStore == null) {
         interest.readResultedIn(
-          Result.NotFound,
-          new IllegalStateException("Store not found: " + storeName),
+          Failure.of(new StorageException(Result.NotFound, "Store not found: " + storeName)),
           id,
           EMPTY_STATE, 
           object);
@@ -131,11 +131,10 @@ public class GeodeStateStoreActor extends Actor implements ObjectStateStore, Dis
       logger().log("readFor - state: " + state);
 
       if (state != null) {
-        interest.readResultedIn(Result.Success, id, state, object);
+        interest.readResultedIn(Success.of(Result.Success), id, state, object);
       } else {
         interest.readResultedIn(
-          Result.NotFound,
-          new IllegalStateException("Not found."),
+          Failure.of(new StorageException(Result.NotFound, "Not found.")),
           id,
           EMPTY_STATE,
           object);
@@ -170,8 +169,7 @@ public class GeodeStateStoreActor extends Actor implements ObjectStateStore, Dis
     if (interest != null) {
       if (state == null) {
         interest.writeResultedIn(
-          Result.Error,
-          new IllegalArgumentException("The state is null."),
+          Failure.of(new StorageException(Result.Error, "The state is null.")),
           null,
           EMPTY_STATE,
           object);
@@ -181,9 +179,7 @@ public class GeodeStateStoreActor extends Actor implements ObjectStateStore, Dis
           logger().log("writeWith - storeName: " + storeName);
 
           if (storeName == null) {
-            interest.writeResultedIn(
-              Result.NoTypeStore,
-              new IllegalStateException("Store not configured: " + storeName),
+            interest.writeResultedIn(Failure.of(new StorageException(Result.NoTypeStore, "Store not configured: " + storeName)),
               state.id,
               state,
               object);
@@ -195,8 +191,7 @@ public class GeodeStateStoreActor extends Actor implements ObjectStateStore, Dis
 
           if (typeStore == null) {
             interest.writeResultedIn(
-                Result.NoTypeStore,
-                new IllegalArgumentException("Store not found: " + storeName),
+                Failure.of(new StorageException(Result.NoTypeStore, "Store not found: " + storeName)),
                 state.id,
                 state,
                 object);
@@ -207,8 +202,7 @@ public class GeodeStateStoreActor extends Actor implements ObjectStateStore, Dis
           if (persistedState != null) {
             if (persistedState.dataVersion >= state.dataVersion) {
               interest.writeResultedIn(
-                Result.ConcurrentyViolation,
-                new IllegalArgumentException("Version conflict."),
+                Failure.of(new StorageException(Result.ConcurrentyViolation, "Version conflict.")),
                 state.id,
                 state,
                 object);
@@ -221,11 +215,11 @@ public class GeodeStateStoreActor extends Actor implements ObjectStateStore, Dis
           dispatchables.add(new Dispatchable<Object>(dispatchId, state));
           dispatch(dispatchId, state);
 
-          interest.writeResultedIn(Result.Success, state.id, state, object);
+          interest.writeResultedIn(Success.of(Result.Success), state.id, state, object);
           
         } catch (Exception e) {
           logger().log(getClass().getSimpleName() + " writeWith() error because: " + e.getMessage(), e);
-          interest.writeResultedIn(Result.Error, e, state.id, state, object);
+          interest.writeResultedIn(Failure.of(new StorageException(Result.Error, e.getMessage(), e)), state.id, state, object);
         }
       }
     } else {
