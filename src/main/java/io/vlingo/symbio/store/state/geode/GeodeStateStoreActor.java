@@ -16,7 +16,7 @@ import io.vlingo.actors.Actor;
 import io.vlingo.common.Failure;
 import io.vlingo.common.Success;
 import io.vlingo.symbio.State;
-import io.vlingo.symbio.State.NullState;
+import io.vlingo.symbio.State.ObjectState;
 import io.vlingo.symbio.store.Result;
 import io.vlingo.symbio.store.StorageException;
 import io.vlingo.symbio.store.state.ObjectStateStore;
@@ -28,9 +28,9 @@ import io.vlingo.symbio.store.state.StateTypeStateStoreMap;
  */
 public class GeodeStateStoreActor extends Actor implements ObjectStateStore, DispatcherControl {
   
-  private static final NullState<Object> EMPTY_STATE = NullState.Object;
+  private static final ObjectState<Object> EMPTY_STATE = ObjectState.Null;
   
-  private final List<Dispatchable<Object>> dispatchables;
+  private final List<Dispatchable<ObjectState<Object>>> dispatchables;
   private final ObjectDispatcher dispatcher;
   //private final Configuration configuration;
   private final GemFireCache cache;
@@ -55,19 +55,19 @@ public class GeodeStateStoreActor extends Actor implements ObjectStateStore, Dis
 
   @Override
   public void confirmDispatched(final String dispatchId, final ConfirmDispatchedResultInterest interest) {
-    dispatchables.remove(new Dispatchable<byte[]>(dispatchId, null));
+    dispatchables.remove(new Dispatchable<ObjectState<Object>>(dispatchId, null));
     interest.confirmDispatchedResultedIn(Result.Success, dispatchId);
   }
 
   @Override
   public void dispatchUnconfirmed() {
     for (int idx = 0; idx < dispatchables.size(); ++idx) {
-      final Dispatchable<Object> dispatchable = dispatchables.get(idx);
+      final Dispatchable<ObjectState<Object>> dispatchable = dispatchables.get(idx);
       dispatch(dispatchable.id, dispatchable.state);
     }
   }
 
-  protected void dispatch(final String dispatchId, final State<Object> state) {
+  protected void dispatch(final String dispatchId, final ObjectState<Object> state) {
     dispatcher.dispatchObject(dispatchId, state);
   }
 
@@ -76,7 +76,7 @@ public class GeodeStateStoreActor extends Actor implements ObjectStateStore, Dis
    * java.lang.Class, io.vlingo.symbio.store.state.StateStore.ReadResultInterest)
    */
   @Override
-  public void read(String id, Class<?> type, ReadResultInterest<Object> interest) {
+  public void read(String id, Class<?> type, ReadResultInterest<ObjectState<Object>> interest) {
     readFor(id, type, interest, null);
   }
 
@@ -86,11 +86,11 @@ public class GeodeStateStoreActor extends Actor implements ObjectStateStore, Dis
    * java.lang.Object)
    */
   @Override
-  public void read(String id, Class<?> type, ReadResultInterest<Object> interest, Object object) {
+  public void read(String id, Class<?> type, ReadResultInterest<ObjectState<Object>> interest, Object object) {
     readFor(id, type, interest, object);
   }
 
-  protected void readFor(final String id, final Class<?> type, final ReadResultInterest<Object> interest, final Object object) {
+  protected void readFor(final String id, final Class<?> type, final ReadResultInterest<ObjectState<Object>> interest, final Object object) {
     
     if (interest != null) {
       
@@ -115,7 +115,7 @@ public class GeodeStateStoreActor extends Actor implements ObjectStateStore, Dis
         return;
       }
 
-      final Region<Object, State<Object>> typeStore = cache.getRegion(storeName);
+      final Region<Object, ObjectState<Object>> typeStore = cache.getRegion(storeName);
       logger().log("readFor - typeStore: " + typeStore);
 
       if (typeStore == null) {
@@ -127,7 +127,7 @@ public class GeodeStateStoreActor extends Actor implements ObjectStateStore, Dis
         return;
       }
 
-      final State<Object> state = typeStore.get(id);
+      final ObjectState<Object> state = typeStore.get(id);
       logger().log("readFor - state: " + state);
 
       if (state != null) {
@@ -150,7 +150,7 @@ public class GeodeStateStoreActor extends Actor implements ObjectStateStore, Dis
    * io.vlingo.symbio.store.state.StateStore.WriteResultInterest)
    */
   @Override
-  public void write(State<Object> state, WriteResultInterest<Object> interest) {
+  public void write(ObjectState<Object> state, WriteResultInterest<ObjectState<Object>> interest) {
     writeWith(state, interest, null);
   }
 
@@ -161,11 +161,11 @@ public class GeodeStateStoreActor extends Actor implements ObjectStateStore, Dis
    * java.lang.Object)
    */
   @Override
-  public void write(State<Object> state, WriteResultInterest<Object> interest, Object object) {
+  public void write(ObjectState<Object> state, WriteResultInterest<ObjectState<Object>> interest, Object object) {
     writeWith(state, interest, object);
   }
   
-  protected void writeWith(final State<Object> state, final WriteResultInterest<Object> interest, final Object object) {
+  protected void writeWith(final ObjectState<Object> state, final WriteResultInterest<ObjectState<Object>> interest, final Object object) {
     if (interest != null) {
       if (state == null) {
         interest.writeResultedIn(
@@ -212,7 +212,7 @@ public class GeodeStateStoreActor extends Actor implements ObjectStateStore, Dis
           }
           
           final String dispatchId = storeName + ":" + state.id;
-          dispatchables.add(new Dispatchable<Object>(dispatchId, state));
+          dispatchables.add(new Dispatchable<>(dispatchId, state));
           dispatch(dispatchId, state);
 
           interest.writeResultedIn(Success.of(Result.Success), state.id, state, object);
