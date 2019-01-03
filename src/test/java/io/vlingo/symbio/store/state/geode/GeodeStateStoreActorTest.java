@@ -7,7 +7,8 @@
 package io.vlingo.symbio.store.state.geode;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import org.apache.geode.cache.GemFireCache;
@@ -26,11 +27,12 @@ import io.vlingo.symbio.Metadata;
 import io.vlingo.symbio.State.ObjectState;
 import io.vlingo.symbio.store.Result;
 import io.vlingo.symbio.store.state.Entity1;
+import io.vlingo.symbio.store.state.Entity1.Entity1StateAdapter;
 import io.vlingo.symbio.store.state.MetadataPdxSerializer;
 import io.vlingo.symbio.store.state.MockObjectDispatcher;
 import io.vlingo.symbio.store.state.MockObjectResultInterest;
-import io.vlingo.symbio.store.state.ObjectStateStore;
 import io.vlingo.symbio.store.state.StatePdxSerializerRegistry;
+import io.vlingo.symbio.store.state.StateStore;
 import io.vlingo.symbio.store.state.StateTypeStateStoreMap;
 /**
  * GemFireStateStoreTest is responsible for testing {@link GeodeStateStoreActor}.
@@ -42,7 +44,7 @@ public class GeodeStateStoreActorTest {
   private static Configuration configuration;
   private MockObjectDispatcher dispatcher;
   private MockObjectResultInterest interest;
-  private ObjectStateStore store;
+  private StateStore store;
   private World world;
   
   @Test
@@ -50,14 +52,14 @@ public class GeodeStateStoreActorTest {
     final Entity1 entity = new Entity1("123", 5);
     interest.until = TestUntil.happenings(1);
 
-    store.write(new ObjectState<>(entity.id, Entity1.class, 1, entity, 1), interest);
+    store.write(entity.id, entity, 1, interest);
 
     interest.until.completes();
 
     assertEquals(0, interest.readObjectResultedIn.get());
     assertEquals(1, interest.writeObjectResultedIn.get());
     assertEquals(Result.Success, interest.objectWriteResult.get());
-    assertEquals(entity, interest.objectState.get().data);
+    assertEquals(entity, interest.objectState.get());
   }
   
   @Test
@@ -65,7 +67,7 @@ public class GeodeStateStoreActorTest {
     final Entity1 entity = new Entity1("123", 5);
     interest.until = TestUntil.happenings(3);
 
-    store.write(new ObjectState<>(entity.id, Entity1.class, 1, entity, 1), interest);
+    store.write(entity.id, entity, 1, interest);
     store.read(entity.id, Entity1.class, interest);
 
     interest.until.completes();
@@ -73,11 +75,10 @@ public class GeodeStateStoreActorTest {
     assertEquals(1, interest.readObjectResultedIn.get());
     assertEquals(1, interest.writeObjectResultedIn.get());
     assertEquals(Result.Success, interest.objectReadResult.get());
-    assertEquals(entity, interest.objectState.get().data);
-    assertEquals(1, interest.objectState.get().typeVersion);
-    assertFalse(interest.objectState.get().hasMetadata());
+    assertEquals(entity, interest.objectState.get());
+    assertNotNull(interest.metadataHolder.get());
 
-    final Entity1 readEntity = (Entity1) interest.objectState.get().data;
+    final Entity1 readEntity = (Entity1) interest.objectState.get();
 
     assertEquals("123", readEntity.id);
     assertEquals(5, readEntity.value);
@@ -88,7 +89,7 @@ public class GeodeStateStoreActorTest {
     final Entity1 entity = new Entity1("123", 5);
     interest.until = TestUntil.happenings(2);
 
-    store.write(new ObjectState<>(entity.id, Entity1.class, 1, entity, 1, Metadata.withValue("value")), interest);
+    store.write(entity.id, entity, 1, interest);
     store.read(entity.id, Entity1.class, interest);
 
     interest.until.completes();
@@ -96,14 +97,12 @@ public class GeodeStateStoreActorTest {
     assertEquals(1, interest.readObjectResultedIn.get());
     assertEquals(1, interest.writeObjectResultedIn.get());
     assertEquals(Result.Success, interest.objectReadResult.get());
-    assertEquals(entity, interest.objectState.get().data);
-    assertEquals(1, interest.objectState.get().typeVersion);
-    assertTrue(interest.objectState.get().hasMetadata());
-    assertTrue(interest.objectState.get().metadata.hasValue());
-    assertEquals("value", interest.objectState.get().metadata.value);
-    assertFalse(interest.objectState.get().metadata.hasOperation());
+    assertEquals(entity, interest.objectState.get());
+    assertNotNull(interest.metadataHolder.get());
+    assertTrue(interest.metadataHolder.get().hasValue());
+    assertEquals("value", interest.metadataHolder.get().value);
 
-    final Entity1 readEntity = (Entity1) interest.objectState.get().data;
+    final Entity1 readEntity = (Entity1) interest.objectState.get();
 
     assertEquals("123", readEntity.id);
     assertEquals(5, readEntity.value);
@@ -114,7 +113,7 @@ public class GeodeStateStoreActorTest {
     final Entity1 entity = new Entity1("123", 5);
     interest.until = TestUntil.happenings(2);
 
-    store.write(new ObjectState<>(entity.id, Entity1.class, 1, entity, 1, Metadata.withOperation("op")), interest);
+    store.write(entity.id, entity, 1, interest);
     store.read(entity.id, Entity1.class, interest);
 
     interest.until.completes();
@@ -122,14 +121,12 @@ public class GeodeStateStoreActorTest {
     assertEquals(1, interest.readObjectResultedIn.get());
     assertEquals(1, interest.writeObjectResultedIn.get());
     assertEquals(Result.Success, interest.objectReadResult.get());
-    assertEquals(entity, interest.objectState.get().data);
-    assertEquals(1, interest.objectState.get().typeVersion);
-    assertTrue(interest.objectState.get().hasMetadata());
-    assertFalse(interest.objectState.get().metadata.hasValue());
-    assertTrue(interest.objectState.get().metadata.hasOperation());
-    assertEquals("op", interest.objectState.get().metadata.operation);
+    assertEquals(entity, interest.objectState.get());
+    assertNotNull(interest.metadataHolder.get());
+    assertTrue(interest.metadataHolder.get().hasOperation());
+    assertEquals("op", interest.metadataHolder.get().operation);
 
-    final Entity1 readEntity = (Entity1) interest.objectState.get().data;
+    final Entity1 readEntity = (Entity1) interest.objectState.get();
 
     assertEquals("123", readEntity.id);
     assertEquals(5, readEntity.value);
@@ -140,7 +137,7 @@ public class GeodeStateStoreActorTest {
     final Entity1 entity = new Entity1("123", 5);
     interest.until = TestUntil.happenings(3);
 
-    store.write(new ObjectState<>(entity.id, Entity1.class, 1, entity, 1, Metadata.withOperation("op")), interest);
+    store.write(entity.id, entity, 1, interest);
     store.read(entity.id, Entity1.class, interest);
 
     interest.until.completes();
@@ -148,14 +145,14 @@ public class GeodeStateStoreActorTest {
     assertEquals(1, interest.readObjectResultedIn.get());
     assertEquals(1, interest.writeObjectResultedIn.get());
     assertEquals(Result.Success, interest.objectReadResult.get());
-    assertEquals(entity, interest.objectState.get().data);
-    assertEquals(1, interest.objectState.get().typeVersion);
-    assertTrue(interest.objectState.get().hasMetadata());
-    assertFalse(interest.objectState.get().metadata.hasValue());
-    assertTrue(interest.objectState.get().metadata.hasOperation());
-    assertEquals("op", interest.objectState.get().metadata.operation);
+    assertEquals(entity, interest.objectState.get());
+    assertNotNull(interest.metadataHolder.get());
+    assertTrue(interest.metadataHolder.get().hasValue());
+    assertEquals("value", interest.metadataHolder.get().value);
+    assertTrue(interest.metadataHolder.get().hasOperation());
+    assertEquals("op", interest.metadataHolder.get().operation);
 
-    final Entity1 readEntity = (Entity1) interest.objectState.get().data;
+    final Entity1 readEntity = (Entity1) interest.objectState.get();
 
     assertEquals("123", readEntity.id);
     assertEquals(5, readEntity.value);
@@ -166,8 +163,8 @@ public class GeodeStateStoreActorTest {
     final Entity1 entity = new Entity1("123", 5);
 
     interest.until = TestUntil.happenings(4);
-    store.write(new ObjectState<>(entity.id, Entity1.class, 1, entity, 1, Metadata.withOperation("op")), interest);
-    store.write(new ObjectState<>(entity.id, Entity1.class, 1, entity, 2, Metadata.withOperation("op")), interest);
+    store.write(entity.id, entity, 1, interest);
+    store.write(entity.id, entity, 2, interest);
     interest.until.completes();
 
     assertEquals(2, interest.objectWriteAccumulatedResults.size());
@@ -175,9 +172,9 @@ public class GeodeStateStoreActorTest {
     assertEquals(Result.Success, interest.objectWriteAccumulatedResults.poll());
 
     interest.until = TestUntil.happenings(4);
-    store.write(new ObjectState<>(entity.id, Entity1.class, 1, entity, 1, Metadata.withOperation("op")), interest);
-    store.write(new ObjectState<>(entity.id, Entity1.class, 1, entity, 2, Metadata.withOperation("op")), interest);
-    store.write(new ObjectState<>(entity.id, Entity1.class, 1, entity, 3, Metadata.withOperation("op")), interest);
+    store.write(entity.id, entity, 1, interest);
+    store.write(entity.id, entity, 2, interest);
+    store.write(entity.id, entity, 3, interest);
     interest.until.completes();
 
     assertEquals(3, interest.objectWriteAccumulatedResults.size());
@@ -193,11 +190,11 @@ public class GeodeStateStoreActorTest {
     dispatcher.until = TestUntil.happenings(3);
 
     final Entity1 entity1 = new Entity1("123", 1);
-    store.write(new ObjectState<>(entity1.id, Entity1.class, 1, entity1, 1), interest);
+    store.write(entity1.id, entity1, 1, interest);
     final Entity1 entity2 = new Entity1("234", 2);
-    store.write(new ObjectState<>(entity2.id, Entity1.class, 1, entity2, 1), interest);
+    store.write(entity2.id, entity2, 1, interest);
     final Entity1 entity3 = new Entity1("345", 3);
-    store.write(new ObjectState<>(entity3.id, Entity1.class, 1, entity3, 1), interest);
+    store.write(entity3.id, entity3, 1, interest);
 
     interest.until.completes();
     dispatcher.until.completes();
@@ -212,9 +209,9 @@ public class GeodeStateStoreActorTest {
 
     dispatcher.processDispatch.set(false);
     final Entity1 entity4 = new Entity1("456", 4);
-    store.write(new ObjectState<>(entity4.id, Entity1.class, 1, entity4, 1), interest);
+    store.write(entity4.id, entity4, 1, interest);
     final Entity1 entity5 = new Entity1("567", 5);
-    store.write(new ObjectState<>(entity5.id, Entity1.class, 1, entity5, 1), interest);
+    store.write(entity5.id, entity5, 1, interest);
     dispatcher.processDispatch.set(true);
     dispatcher.control.dispatchUnconfirmed();
 
@@ -230,7 +227,7 @@ public class GeodeStateStoreActorTest {
   public void testThatReadErrorIsReported() {
     interest.until = TestUntil.happenings(3);
     final Entity1 entity = new Entity1("123", 1);
-    store.write(new ObjectState<>(entity.id, Entity1.class, 1, entity, 1), interest);
+    store.write(entity.id, entity, 1, interest);
     store.read(null, Entity1.class, interest);
     interest.until.completes();
     assertEquals(1, interest.errorCauses.size());
@@ -242,18 +239,18 @@ public class GeodeStateStoreActorTest {
     interest.until.completes();
     assertEquals("The type is null.", interest.errorCauses.poll().getMessage());
     assertTrue(interest.objectReadResult.get().isError());
-    assertTrue(interest.objectState.get().isNull());
+    assertNull(interest.objectState.get());
   }
 
   @Test
   public void testThatWriteErrorIsReported() {
     interest.until = TestUntil.happenings(1);
-    store.write(null, interest);
+    store.write(null, null, 0, interest);
     interest.until.completes();
     assertEquals(1, interest.errorCauses.size());
     assertEquals("The state is null.", interest.errorCauses.poll().getMessage());
     assertTrue(interest.objectWriteAccumulatedResults.poll().isError());
-    assertTrue(interest.objectState.get().isNull());
+    assertNull(interest.objectState.get());
   }
   
   @BeforeClass
@@ -285,7 +282,8 @@ public class GeodeStateStoreActorTest {
     interest = new MockObjectResultInterest(0);
     dispatcher = new MockObjectDispatcher(0, interest);
     configuration = Configuration.forPeer();
-    store = world.actorFor(Definition.has(GeodeStateStoreActor.class, Definition.parameters(dispatcher, configuration)), ObjectStateStore.class);
+    store = world.actorFor(Definition.has(GeodeStateStoreActor.class, Definition.parameters(dispatcher, configuration)), StateStore.class);
+    store.registerAdapter(Entity1.class, new Entity1StateAdapter());
     StateTypeStateStoreMap.stateTypeToStoreName(Entity1.class, StoreName);
   }
   
