@@ -7,6 +7,10 @@
 
 package io.vlingo.symbio.store.state;
 
+import io.vlingo.symbio.Metadata;
+import io.vlingo.symbio.State.ObjectState;
+import io.vlingo.symbio.StateAdapter;
+
 public class Entity1 {
   public String id;
   public int value;
@@ -53,5 +57,28 @@ public class Entity1 {
   @Override
   public String toString() {
     return "Entity1[id=" + id + " value=" + value + "]";
+  }
+
+  public static class Entity1StateAdapter implements StateAdapter<Entity1,ObjectState<Object>> {
+
+    @Override
+    public int typeVersion() {
+      return 1;
+    }
+
+    @Override
+    public Entity1 fromRawState(final ObjectState<Object> raw) {
+      return (Entity1) raw.data;
+    }
+
+    @Override
+    public ObjectState<Object> toRawState(final Entity1 state, final int stateVersion) {
+      return toRawState(state, stateVersion, Metadata.with("value", "op"));
+    }
+
+    @Override
+    public ObjectState<Object> toRawState(final Entity1 state, final int stateVersion, final Metadata metadata) {
+      return new ObjectState<Object>(state.id, Entity1.class, typeVersion(), state, stateVersion, metadata);
+    }
   }
 }
