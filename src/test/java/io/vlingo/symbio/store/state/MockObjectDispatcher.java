@@ -15,10 +15,10 @@ import io.vlingo.actors.testkit.TestUntil;
 import io.vlingo.symbio.State;
 import io.vlingo.symbio.State.ObjectState;
 import io.vlingo.symbio.store.state.StateStore.ConfirmDispatchedResultInterest;
+import io.vlingo.symbio.store.state.StateStore.Dispatcher;
 import io.vlingo.symbio.store.state.StateStore.DispatcherControl;
-import io.vlingo.symbio.store.state.ObjectStateStore.ObjectDispatcher;
 
-public class MockObjectDispatcher implements ObjectDispatcher {
+public class MockObjectDispatcher implements Dispatcher {
   public final ConfirmDispatchedResultInterest confirmDispatchedResultInterest;
   public DispatcherControl control;
   public final Map<String,State<Object>> dispatched = new HashMap<>();
@@ -36,19 +36,10 @@ public class MockObjectDispatcher implements ObjectDispatcher {
   }
 
   @Override
-  @SuppressWarnings({ "rawtypes", "unchecked" }) 
-  public void dispatch(final String dispatchId, final ObjectState<?> state) {
+  @SuppressWarnings({ "rawtypes", "unchecked" })
+  public <S extends State<?>> void dispatch(final String dispatchId, final S state) {
     if (processDispatch.get()) {
       dispatched.put(dispatchId, (ObjectState) state);
-      control.confirmDispatched(dispatchId, confirmDispatchedResultInterest);
-      until.happened();
-    }
-  }
-
-  @Override
-  public void dispatchObject(final String dispatchId, final ObjectState<Object> state) {
-    if (processDispatch.get()) {
-      dispatched.put(dispatchId, state);
       control.confirmDispatched(dispatchId, confirmDispatchedResultInterest);
       until.happened();
     }
