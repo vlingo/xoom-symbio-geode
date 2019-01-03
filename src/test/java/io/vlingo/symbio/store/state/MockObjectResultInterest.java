@@ -13,17 +13,16 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import io.vlingo.actors.testkit.TestUntil;
 import io.vlingo.common.Outcome;
-import io.vlingo.symbio.State;
-import io.vlingo.symbio.State.ObjectState;
-import io.vlingo.symbio.store.state.StateStore.ConfirmDispatchedResultInterest;
-import io.vlingo.symbio.store.state.StateStore.ReadResultInterest;
+import io.vlingo.symbio.Metadata;
 import io.vlingo.symbio.store.Result;
 import io.vlingo.symbio.store.StorageException;
+import io.vlingo.symbio.store.state.StateStore.ConfirmDispatchedResultInterest;
+import io.vlingo.symbio.store.state.StateStore.ReadResultInterest;
 import io.vlingo.symbio.store.state.StateStore.WriteResultInterest;
 
 public class MockObjectResultInterest
-    implements ReadResultInterest<ObjectState<Object>>,
-               WriteResultInterest<ObjectState<Object>>,
+    implements ReadResultInterest,
+               WriteResultInterest,
                ConfirmDispatchedResultInterest {
 
   public AtomicInteger confirmDispatchedResultedIn = new AtomicInteger(0);
@@ -34,8 +33,9 @@ public class MockObjectResultInterest
   public AtomicReference<Result> objectReadResult = new AtomicReference<>();
   public AtomicReference<Result> objectWriteResult = new AtomicReference<>();
   public ConcurrentLinkedQueue<Result> objectWriteAccumulatedResults = new ConcurrentLinkedQueue<>();
-  public AtomicReference<State<Object>> objectState = new AtomicReference<>();
+  public AtomicReference<Object> objectState = new AtomicReference<>();
   public ConcurrentLinkedQueue<Exception> errorCauses = new ConcurrentLinkedQueue<>();
+  public AtomicReference<Metadata> metadataHolder = new AtomicReference<>();
 
   public MockObjectResultInterest(final int testUntilHappenings) {
     until = TestUntil.happenings(testUntilHappenings);
@@ -48,44 +48,46 @@ public class MockObjectResultInterest
   }
 
   @Override
-  public void readResultedIn(final Outcome<StorageException, Result> outcome, final String id, ObjectState<Object> state, final Object object) {
+  public <S> void readResultedIn(final Outcome<StorageException, Result> outcome, final String id, final S state, final int stateVersion, final Metadata metadata, final Object object) {
     outcome
-      .andThen(result -> {
-        readObjectResultedIn.incrementAndGet();
-        objectReadResult.set(result);
-        objectState.set(state);
-        until.happened();
-        return result;
-      })
-      .otherwise(cause -> {
-        readObjectResultedIn.incrementAndGet();
-        objectReadResult.set(cause.result);
-        objectState.set(state);
-        errorCauses.add(cause);
-        until.happened();
-        return cause.result;
-      });
+    .andThen(result -> {
+      readObjectResultedIn.incrementAndGet();
+      objectReadResult.set(result);
+      objectState.set(state);
+      metadataHolder.set(metadata);
+      until.happened();
+      return result;
+    })
+    .otherwise(cause -> {
+      readObjectResultedIn.incrementAndGet();
+      objectReadResult.set(cause.result);
+      objectState.set(state);
+      metadataHolder.set(metadata);
+      errorCauses.add(cause);
+      until.happened();
+      return cause.result;
+    });
   }
 
   @Override
-  public void writeResultedIn(final Outcome<StorageException, Result> outcome, final String id, final ObjectState<Object> state, final Object object) {
+  public <S> void writeResultedIn(final Outcome<StorageException, Result> outcome, final String id, final S state, final int stateVersion, final Object object) {
     outcome
-      .andThen(result -> {
-        writeObjectResultedIn.incrementAndGet();
-        objectWriteResult.set(result);
-        objectWriteAccumulatedResults.add(result);
-        objectState.set(state);
-        until.happened();
-        return result;
-      })
-      .otherwise(cause -> {
-        writeObjectResultedIn.incrementAndGet();
-        objectWriteResult.set(cause.result);
-        objectWriteAccumulatedResults.add(cause.result);
-        objectState.set(state);
-        errorCauses.add(cause);
-        until.happened();
-        return cause.result;
-      });
+    .andThen(result -> {
+      writeObjectResultedIn.incrementAndGet();
+      objectWriteResult.set(result);
+      objectWriteAccumulatedResults.add(result);
+      objectState.set(state);
+      until.happened();
+      return result;
+    })
+    .otherwise(cause -> {
+      writeObjectResultedIn.incrementAndGet();
+      objectWriteResult.set(cause.result);
+      objectWriteAccumulatedResults.add(cause.result);
+      objectState.set(state);
+      errorCauses.add(cause);
+      until.happened();
+      return cause.result;
+    });
   }
 }
