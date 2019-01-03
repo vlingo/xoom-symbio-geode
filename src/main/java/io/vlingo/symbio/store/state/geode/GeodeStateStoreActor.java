@@ -15,31 +15,33 @@ import org.apache.geode.cache.Region;
 import io.vlingo.actors.Actor;
 import io.vlingo.common.Failure;
 import io.vlingo.common.Success;
+import io.vlingo.symbio.Metadata;
 import io.vlingo.symbio.State;
 import io.vlingo.symbio.State.ObjectState;
+import io.vlingo.symbio.StateAdapter;
 import io.vlingo.symbio.store.Result;
 import io.vlingo.symbio.store.StorageException;
-import io.vlingo.symbio.store.state.ObjectStateStore;
+import io.vlingo.symbio.store.state.StateStore;
 import io.vlingo.symbio.store.state.StateStore.DispatcherControl;
+import io.vlingo.symbio.store.state.StateStoreAdapterAssistant;
 import io.vlingo.symbio.store.state.StateTypeStateStoreMap;
 /**
  * GeodeStateStoreActor is responsible for reading and writing
  * objects from/to a GemFire cache.
  */
-public class GeodeStateStoreActor extends Actor implements ObjectStateStore, DispatcherControl {
+public class GeodeStateStoreActor extends Actor implements StateStore, DispatcherControl {
   
-  private static final ObjectState<Object> EMPTY_STATE = ObjectState.Null;
-  
+  private final StateStoreAdapterAssistant adapterAssistant;
   private final List<Dispatchable<ObjectState<Object>>> dispatchables;
-  private final ObjectDispatcher dispatcher;
+  private final Dispatcher dispatcher;
   //private final Configuration configuration;
   private final GemFireCache cache;
 
-  public GeodeStateStoreActor(final ObjectDispatcher aDispatcher, final Configuration aConfiguration) {
+  public GeodeStateStoreActor(final Dispatcher aDispatcher, final Configuration aConfiguration) {
     this.dispatchables = new ArrayList<>();
 
     if (aDispatcher == null) {
-      throw new IllegalArgumentException("ObjectDispatcher must not be null.");
+      throw new IllegalArgumentException("Dispatcher must not be null.");
     }
     this.dispatcher = aDispatcher;
     
@@ -48,6 +50,7 @@ public class GeodeStateStoreActor extends Actor implements ObjectStateStore, Dis
     }
     //this.configuration = aConfiguration;
     
+    this.adapterAssistant = new StateStoreAdapterAssistant();
     this.cache = GemFireCacheProvider.getAnyInstance(aConfiguration);
 
     dispatcher.controlWith(selfAs(DispatcherControl.class));
@@ -68,29 +71,25 @@ public class GeodeStateStoreActor extends Actor implements ObjectStateStore, Dis
   }
 
   protected void dispatch(final String dispatchId, final ObjectState<Object> state) {
-    dispatcher.dispatchObject(dispatchId, state);
+    dispatcher.dispatch(dispatchId, state);
   }
 
   /*
-   * @see io.vlingo.symbio.store.state.ObjectStateStore#read(java.lang.String,
-   * java.lang.Class, io.vlingo.symbio.store.state.StateStore.ReadResultInterest)
+   * @see io.vlingo.symbio.store.state.StateStore#read(java.lang.String, java.lang.Class, io.vlingo.symbio.store.state.StateStore.ReadResultInterest)
    */
-  @Override
-  public void read(String id, Class<?> type, ReadResultInterest<ObjectState<Object>> interest) {
+  public void read(String id, Class<?> type, ReadResultInterest interest) {
     readFor(id, type, interest, null);
   }
 
   /*
-   * @see io.vlingo.symbio.store.state.ObjectStateStore#read(java.lang.String,
-   * java.lang.Class, io.vlingo.symbio.store.state.StateStore.ReadResultInterest,
-   * java.lang.Object)
+   * @see io.vlingo.symbio.store.state.StateStore#read(java.lang.String, java.lang.Class, io.vlingo.symbio.store.state.StateStore.ReadResultInterest, java.lang.Object)
    */
   @Override
-  public void read(String id, Class<?> type, ReadResultInterest<ObjectState<Object>> interest, Object object) {
+  public void read(String id, Class<?> type, ReadResultInterest interest, Object object) {
     readFor(id, type, interest, object);
   }
 
-  protected void readFor(final String id, final Class<?> type, final ReadResultInterest<ObjectState<Object>> interest, final Object object) {
+  protected void readFor(final String id, final Class<?> type, final ReadResultInterest interest, final Object object) {
     
     if (interest != null) {
       
@@ -98,7 +97,9 @@ public class GeodeStateStoreActor extends Actor implements ObjectStateStore, Dis
         interest.readResultedIn(
           Failure.of(new StorageException(Result.Error, id == null ? "The id is null." : "The type is null.")),
           id,
-          EMPTY_STATE,
+          null,
+          -1,
+          null,
           object);
         return;
       }
@@ -110,7 +111,9 @@ public class GeodeStateStoreActor extends Actor implements ObjectStateStore, Dis
         interest.readResultedIn(
           Failure.of(new StorageException(Result.NoTypeStore, "No type store.")),
           id,
-          EMPTY_STATE,
+          null,
+          -1,
+          null,
           object);
         return;
       }
@@ -122,21 +125,26 @@ public class GeodeStateStoreActor extends Actor implements ObjectStateStore, Dis
         interest.readResultedIn(
           Failure.of(new StorageException(Result.NotFound, "Store not found: " + storeName)),
           id,
-          EMPTY_STATE, 
+          null,
+          -1,
+          null,
           object);
         return;
       }
 
-      final ObjectState<Object> state = typeStore.get(id);
-      logger().log("readFor - state: " + state);
+      final ObjectState<Object> raw = typeStore.get(id);
+      logger().log("readFor - state: " + raw);
 
-      if (state != null) {
-        interest.readResultedIn(Success.of(Result.Success), id, state, object);
+      if (raw != null) {
+        final Object state = adapterAssistant.adaptFromRawState(raw);
+        interest.readResultedIn(Success.of(Result.Success), id, state, raw.dataVersion, raw.metadata, object);
       } else {
         interest.readResultedIn(
           Failure.of(new StorageException(Result.NotFound, "Not found.")),
           id,
-          EMPTY_STATE,
+          null,
+          -1,
+          null,
           object);
       }
     } else {
@@ -145,43 +153,58 @@ public class GeodeStateStoreActor extends Actor implements ObjectStateStore, Dis
   }
 
   /*
-   * @see
-   * io.vlingo.symbio.store.state.ObjectStateStore#write(io.vlingo.symbio.State,
-   * io.vlingo.symbio.store.state.StateStore.WriteResultInterest)
+   * @see io.vlingo.symbio.store.state.StateStore#write(java.lang.String, java.lang.Object, int, io.vlingo.symbio.store.state.StateStore.WriteResultInterest)
    */
   @Override
-  public void write(ObjectState<Object> state, WriteResultInterest<ObjectState<Object>> interest) {
-    writeWith(state, interest, null);
+  public <S> void write(final String id, final S state, final int stateVersion, final WriteResultInterest interest) {
+    writeWith(id, state, stateVersion, null, interest, null);
   }
 
   /*
-   * @see
-   * io.vlingo.symbio.store.state.ObjectStateStore#write(io.vlingo.symbio.State,
-   * io.vlingo.symbio.store.state.StateStore.WriteResultInterest,
-   * java.lang.Object)
+   * @see io.vlingo.symbio.store.state.StateStore#write(java.lang.String, java.lang.Object, int, io.vlingo.symbio.Metadata, io.vlingo.symbio.store.state.StateStore.WriteResultInterest)
    */
   @Override
-  public void write(ObjectState<Object> state, WriteResultInterest<ObjectState<Object>> interest, Object object) {
-    writeWith(state, interest, object);
+  public <S> void write(final String id, final S state, final int stateVersion, final Metadata metadata, final WriteResultInterest interest) {
+    writeWith(id, state, stateVersion, metadata, interest, null);
   }
-  
-  protected void writeWith(final ObjectState<Object> state, final WriteResultInterest<ObjectState<Object>> interest, final Object object) {
+
+  /*
+   * @see io.vlingo.symbio.store.state.StateStore#write(java.lang.String, java.lang.Object, int, io.vlingo.symbio.store.state.StateStore.WriteResultInterest, java.lang.Object)
+   */
+  @Override
+  public <S> void write(final String id, final S state, final int stateVersion, final WriteResultInterest interest, final Object object) {
+    writeWith(id, state, stateVersion, null, interest, object);
+  }
+
+  @Override
+  public <S> void write(final String id, final S state, final int stateVersion, final Metadata metadata, final WriteResultInterest interest, final Object object) {
+    writeWith(id, state, stateVersion, metadata, interest, object);
+  }
+
+  @Override
+  public <S, R extends State<?>> void registerAdapter(final Class<S> stateType, final StateAdapter<S, R> adapter) {
+    adapterAssistant.registerAdapter(stateType, adapter);
+  }
+
+  protected <S> void writeWith(final String id, final S state, final int stateVersion, final Metadata metadata, final WriteResultInterest interest, final Object object) {
     if (interest != null) {
       if (state == null) {
         interest.writeResultedIn(
           Failure.of(new StorageException(Result.Error, "The state is null.")),
-          null,
-          EMPTY_STATE,
+          id,
+          state,
+          stateVersion,
           object);
       } else {
         try {
-          final String storeName = StateTypeStateStoreMap.storeNameFrom(state.type);
+          final String storeName = StateTypeStateStoreMap.storeNameFrom(state.getClass());
           logger().log("writeWith - storeName: " + storeName);
 
           if (storeName == null) {
             interest.writeResultedIn(Failure.of(new StorageException(Result.NoTypeStore, "Store not configured: " + storeName)),
-              state.id,
+              id,
               state,
+              stateVersion,
               object);
             return;
           }
@@ -192,41 +215,47 @@ public class GeodeStateStoreActor extends Actor implements ObjectStateStore, Dis
           if (typeStore == null) {
             interest.writeResultedIn(
                 Failure.of(new StorageException(Result.NoTypeStore, "Store not found: " + storeName)),
-                state.id,
+                id,
                 state,
+                stateVersion,
                 object);
             return;
           }
 
-          final State<Object> persistedState = typeStore.putIfAbsent(state.id, state);
+          final ObjectState<Object> raw = metadata == null ?
+                  adapterAssistant.adaptToRawState(state, stateVersion) :
+                  adapterAssistant.adaptToRawState(state, stateVersion, metadata);
+
+          final State<Object> persistedState = typeStore.putIfAbsent(id, raw);
           if (persistedState != null) {
-            if (persistedState.dataVersion >= state.dataVersion) {
+            if (persistedState.dataVersion >= raw.dataVersion) {
               interest.writeResultedIn(
                 Failure.of(new StorageException(Result.ConcurrentyViolation, "Version conflict.")),
-                state.id,
+                id,
                 state,
+                stateVersion,
                 object);
               return;
             }
-            typeStore.put(state.id, state);
+            typeStore.put(id, raw);
           }
           
-          final String dispatchId = storeName + ":" + state.id;
-          dispatchables.add(new Dispatchable<>(dispatchId, state));
-          dispatch(dispatchId, state);
+          final String dispatchId = storeName + ":" + id;
+          dispatchables.add(new Dispatchable<>(dispatchId, raw));
+          dispatch(dispatchId, raw);
 
-          interest.writeResultedIn(Success.of(Result.Success), state.id, state, object);
+          interest.writeResultedIn(Success.of(Result.Success), id, state, stateVersion, object);
           
         } catch (Exception e) {
           logger().log(getClass().getSimpleName() + " writeWith() error because: " + e.getMessage(), e);
-          interest.writeResultedIn(Failure.of(new StorageException(Result.Error, e.getMessage(), e)), state.id, state, object);
+          interest.writeResultedIn(Failure.of(new StorageException(Result.Error, e.getMessage(), e)), id, state, stateVersion, object);
         }
       }
     } else {
       logger().log(
         getClass().getSimpleName() +
         " writeWith() missing WriteResultInterest for: " +
-        (state == null ? "unknown id" : state.id));
+        (state == null ? "unknown id" : id));
     }
   }
 }
