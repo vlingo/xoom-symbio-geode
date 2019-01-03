@@ -21,13 +21,13 @@ Support for Apache Geode is provided by `GeodeStateStoreActor`
     <dependency>
       <groupId>io.vlingo</groupId>
       <artifactId>vlingo-symbio</artifactId>
-      <version>0.7.7</version>
+      <version>0.7.8</version>
       <scope>compile</scope>
     </dependency>
     <dependency>
       <groupId>io.vlingo</groupId>
       <artifactId>vlingo-symbio-geode</artifactId>
-      <version>0.7.7</version>
+      <version>0.7.8</version>
       <scope>compile</scope>
     </dependency>
   </dependencies>
@@ -35,8 +35,8 @@ Support for Apache Geode is provided by `GeodeStateStoreActor`
 
 ```gradle
 dependencies {
-    compile 'io.vlingo:vlingo-symbio:0.7.7'
-    compile 'io.vlingo:vlingo-symbio-geode:0.7.7'
+    compile 'io.vlingo:vlingo-symbio:0.7.8'
+    compile 'io.vlingo:vlingo-symbio-geode:0.7.8'
 }
 
 repositories {
