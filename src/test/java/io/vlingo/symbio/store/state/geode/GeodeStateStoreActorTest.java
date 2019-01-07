@@ -20,7 +20,6 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import io.vlingo.actors.Definition;
 import io.vlingo.actors.World;
 import io.vlingo.actors.testkit.TestUntil;
 import io.vlingo.symbio.Metadata;
@@ -282,7 +281,7 @@ public class GeodeStateStoreActorTest {
     interest = new MockObjectResultInterest(0);
     dispatcher = new MockObjectDispatcher(0, interest);
     configuration = Configuration.forPeer();
-    store = world.actorFor(Definition.has(GeodeStateStoreActor.class, Definition.parameters(dispatcher, configuration)), StateStore.class);
+    store = world.actorFor(StateStore.class, GeodeStateStoreActor.class, dispatcher, configuration);
     store.registerAdapter(Entity1.class, new Entity1StateAdapter());
     StateTypeStateStoreMap.stateTypeToStoreName(Entity1.class, StoreName);
   }
