@@ -13,6 +13,7 @@ import org.apache.geode.cache.GemFireCache;
 import org.apache.geode.cache.Region;
 
 import io.vlingo.actors.Actor;
+import io.vlingo.actors.Definition;
 import io.vlingo.common.Failure;
 import io.vlingo.common.Success;
 import io.vlingo.symbio.Metadata;
@@ -21,6 +22,7 @@ import io.vlingo.symbio.State.ObjectState;
 import io.vlingo.symbio.StateAdapter;
 import io.vlingo.symbio.store.Result;
 import io.vlingo.symbio.store.StorageException;
+import io.vlingo.symbio.store.state.RedispatchControlActor;
 import io.vlingo.symbio.store.state.StateStore;
 import io.vlingo.symbio.store.state.StateStore.DispatcherControl;
 import io.vlingo.symbio.store.state.StateStoreAdapterAssistant;
@@ -34,26 +36,48 @@ public class GeodeStateStoreActor extends Actor implements StateStore, Dispatche
   private final StateStoreAdapterAssistant adapterAssistant;
   private final List<Dispatchable<ObjectState<Object>>> dispatchables;
   private final Dispatcher dispatcher;
-  //private final Configuration configuration;
   private final GemFireCache cache;
+  private final RedispatchControl redispatchControl;
 
-  public GeodeStateStoreActor(final Dispatcher aDispatcher, final Configuration aConfiguration) {
-    this.dispatchables = new ArrayList<>();
-
-    if (aDispatcher == null) {
+  public GeodeStateStoreActor(final Dispatcher dispatcher, final Configuration configuration) {
+    this(dispatcher, configuration, 100L, 1000L);
+  }
+  
+  public GeodeStateStoreActor(final Dispatcher dispatcher, final Configuration configuration, long checkConfirmationExpirationInterval, final long confirmationExpiration) {
+    if (dispatcher == null) {
       throw new IllegalArgumentException("Dispatcher must not be null.");
     }
-    this.dispatcher = aDispatcher;
+    this.dispatcher = dispatcher;
     
-    if (aConfiguration == null) {
+    if (configuration == null) {
       throw new IllegalArgumentException("Configuration must not be null.");
     }
-    //this.configuration = aConfiguration;
     
     this.adapterAssistant = new StateStoreAdapterAssistant();
-    this.cache = GemFireCacheProvider.getAnyInstance(aConfiguration);
+    this.cache = GemFireCacheProvider.getAnyInstance(configuration);
+    this.dispatchables = new ArrayList<>();
 
-    dispatcher.controlWith(selfAs(DispatcherControl.class));
+    final DispatcherControl control = selfAs(DispatcherControl.class);
+    
+    this.redispatchControl = stage().actorFor(
+      RedispatchControl.class,
+      Definition.has(
+        RedispatchControlActor.class,
+        Definition.parameters(control, checkConfirmationExpirationInterval, confirmationExpiration)
+      )
+    );
+
+    dispatcher.controlWith(control);
+    control.dispatchUnconfirmed();
+  }
+
+
+  /* @see io.vlingo.actors.Actor#afterStop() */
+  @Override
+  protected void afterStop() {
+    if (redispatchControl != null) {
+      redispatchControl.cancel();
+    }
   }
 
   @Override
@@ -105,8 +129,6 @@ public class GeodeStateStoreActor extends Actor implements StateStore, Dispatche
       }
       
       final String storeName = StateTypeStateStoreMap.storeNameFrom(type);
-      logger().log("readFor - storeName: " + storeName);
-
       if (storeName == null) {
         interest.readResultedIn(
           Failure.of(new StorageException(Result.NoTypeStore, "No type store.")),
@@ -119,8 +141,6 @@ public class GeodeStateStoreActor extends Actor implements StateStore, Dispatche
       }
 
       final Region<Object, ObjectState<Object>> typeStore = cache.getRegion(storeName);
-      logger().log("readFor - typeStore: " + typeStore);
-
       if (typeStore == null) {
         interest.readResultedIn(
           Failure.of(new StorageException(Result.NotFound, "Store not found: " + storeName)),
@@ -133,12 +153,11 @@ public class GeodeStateStoreActor extends Actor implements StateStore, Dispatche
       }
 
       final ObjectState<Object> raw = typeStore.get(id);
-      logger().log("readFor - state: " + raw);
-
       if (raw != null) {
         final Object state = adapterAssistant.adaptFromRawState(raw);
         interest.readResultedIn(Success.of(Result.Success), id, state, raw.dataVersion, raw.metadata, object);
-      } else {
+      } 
+      else {
         interest.readResultedIn(
           Failure.of(new StorageException(Result.NotFound, "Not found.")),
           id,
@@ -147,7 +166,8 @@ public class GeodeStateStoreActor extends Actor implements StateStore, Dispatche
           null,
           object);
       }
-    } else {
+    } 
+    else {
       logger().log(getClass().getSimpleName() + " readFor() missing ReadResultInterest for: " + (id == null ? "unknown id" : id));
     }
   }
@@ -198,8 +218,6 @@ public class GeodeStateStoreActor extends Actor implements StateStore, Dispatche
       } else {
         try {
           final String storeName = StateTypeStateStoreMap.storeNameFrom(state.getClass());
-          logger().log("writeWith - storeName: " + storeName);
-
           if (storeName == null) {
             interest.writeResultedIn(Failure.of(new StorageException(Result.NoTypeStore, "Store not configured: " + storeName)),
               id,
@@ -210,8 +228,6 @@ public class GeodeStateStoreActor extends Actor implements StateStore, Dispatche
           }
 
           Region<Object, State<Object>> typeStore = cache.getRegion(storeName);
-          logger().log("writeWith - typeStore: " + typeStore);
-
           if (typeStore == null) {
             interest.writeResultedIn(
                 Failure.of(new StorageException(Result.NoTypeStore, "Store not found: " + storeName)),
@@ -221,14 +237,17 @@ public class GeodeStateStoreActor extends Actor implements StateStore, Dispatche
                 object);
             return;
           }
-
+          
           final ObjectState<Object> raw = metadata == null ?
                   adapterAssistant.adaptToRawState(state, stateVersion) :
                   adapterAssistant.adaptToRawState(state, stateVersion, metadata);
-
+                  
           final State<Object> persistedState = typeStore.putIfAbsent(id, raw);
           if (persistedState != null) {
+            logger().log("raw=" + raw);
+            logger().log("persistedState=" + persistedState);
             if (persistedState.dataVersion >= raw.dataVersion) {
+              logger().log("concurrency violation");
               interest.writeResultedIn(
                 Failure.of(new StorageException(Result.ConcurrentyViolation, "Version conflict.")),
                 id,
@@ -243,10 +262,10 @@ public class GeodeStateStoreActor extends Actor implements StateStore, Dispatche
           final String dispatchId = storeName + ":" + id;
           dispatchables.add(new Dispatchable<>(dispatchId, raw));
           dispatch(dispatchId, raw);
-
-          interest.writeResultedIn(Success.of(Result.Success), id, state, stateVersion, object);
           
-        } catch (Exception e) {
+          interest.writeResultedIn(Success.of(Result.Success), id, state, stateVersion, object);
+        }
+        catch (Exception e) {
           logger().log(getClass().getSimpleName() + " writeWith() error because: " + e.getMessage(), e);
           interest.writeResultedIn(Failure.of(new StorageException(Result.Error, e.getMessage(), e)), id, state, stateVersion, object);
         }
