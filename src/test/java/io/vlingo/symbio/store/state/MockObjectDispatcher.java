@@ -10,7 +10,6 @@ package io.vlingo.symbio.store.state;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import io.vlingo.actors.testkit.AccessSafely;
 import io.vlingo.symbio.State;
@@ -25,7 +24,7 @@ public class MockObjectDispatcher implements Dispatcher {
   public DispatcherControl control;
   public final Map<String,Object> dispatched = new HashMap<>();
   public final AtomicBoolean processDispatch = new AtomicBoolean(true);
-  public final AtomicInteger dispatchAttemptCount = new AtomicInteger(0);
+  private int dispatchAttemptCount = 0;
 
   public MockObjectDispatcher(final ConfirmDispatchedResultInterest confirmDispatchedResultInterest) {
     this.confirmDispatchedResultInterest = confirmDispatchedResultInterest;
@@ -39,12 +38,15 @@ public class MockObjectDispatcher implements Dispatcher {
 
   @Override
   public <S extends State<?>> void dispatch(final String dispatchId, final S state) {
-    dispatchAttemptCount.getAndAdd(1);
+    dispatchAttemptCount++;
     if (processDispatch.get()) {
+      //System.out.println("MockObjectDispatcher::dispatch - processed=true for dispatchId=" + dispatchId + " on " + Thread.currentThread().getName());
       access.writeUsing("dispatchedState", dispatchId, (State<?>) state);
-      //System.out.println("MockObjectDispatcher::dispatch - wrote dispatchedState");
       control.confirmDispatched(dispatchId, confirmDispatchedResultInterest);
     }
+    //else {
+      //System.out.println("MockObjectDispatcher::dispatch - processed=false for dispatchId=" + dispatchId + " on " + Thread.currentThread().getName());
+    //}
   }
 
   public AccessSafely afterCompleting(final int times) {
@@ -57,7 +59,7 @@ public class MockObjectDispatcher implements Dispatcher {
       .writingWith("processDispatch", (Boolean flag) -> processDispatch.set(flag))
       .readingWith("processDispatch", () -> processDispatch.get())
       
-      .readingWith("dispatchAttemptCount", () -> dispatchAttemptCount.get())
+      .readingWith("dispatchAttemptCount", () -> dispatchAttemptCount)
 
       .readingWith("dispatched", () -> dispatched);
 

@@ -254,12 +254,16 @@ public class GeodeStateStoreActorTest {
   @Test
   public void testRedispatch() {
     interest.afterCompleting(1);
-    final AccessSafely accessDispatcher = dispatcher.afterCompleting(3);
-
-    final Entity1 entity = new Entity1("123", 5);
+    final AccessSafely accessDispatcher = dispatcher.afterCompleting(5);
 
     accessDispatcher.writeUsing("processDispatch", false);
-    store.write(entity.id, entity, 1, interest);
+    
+    final Entity1 entity1 = new Entity1("123", 1);
+    store.write(entity1.id, entity1, 1, interest);
+    final Entity1 entity2 = new Entity1("234", 2);
+    store.write(entity2.id, entity2, 1, interest);
+    final Entity1 entity3 = new Entity1("345", 3);
+    store.write(entity3.id, entity3, 1, interest);
 
     try {
       Thread.sleep(2000);
@@ -270,13 +274,13 @@ public class GeodeStateStoreActorTest {
     
     accessDispatcher.writeUsing("processDispatch", true);
 
-    int dispatchCount = accessDispatcher.readFrom("dispatchedStateCount");
-    System.out.println("InMemoryStateStoreTest::testRedispatch - dispatchCount=" + dispatchCount);
-    assertTrue("dispatchCount", dispatchCount == 1);
+    int dispatchedStateCount = accessDispatcher.readFrom("dispatchedStateCount");
+    System.out.println("GeodeStateStoreActorTest::testRedispatch - dispatchedStateCount=" + dispatchedStateCount);
+    assertTrue("dispatchedStateCount", dispatchedStateCount == 3);
     
     int dispatchAttemptCount = accessDispatcher.readFrom("dispatchAttemptCount");
-    System.out.println("InMemoryStateStoreTest::testRedispatch - dispatchAttemptCount=" + dispatchAttemptCount);
-    assertTrue("dispatchCount", dispatchAttemptCount > 1);
+    System.out.println("GeodeStateStoreActorTest::testRedispatch - dispatchAttemptCount=" + dispatchAttemptCount);
+    assertTrue("dispatchAttemptCount", dispatchAttemptCount > 1);
 }
   
   @BeforeClass
@@ -350,6 +354,12 @@ public class GeodeStateStoreActorTest {
     if (region != null) {
       for (String key : region.keySet()) {
         region.remove(key);
+      }
+    }
+    Region<String, ObjectState> dispatchablesRegion = cache.getRegion(GeodeQueries.DISPATCHABLES_REGION_NAME);
+    if (dispatchablesRegion != null) {
+      for (String key : dispatchablesRegion.keySet()) {
+        dispatchablesRegion.remove(key);
       }
     }
   }
