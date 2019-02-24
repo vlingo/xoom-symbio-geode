@@ -6,13 +6,12 @@
 // one at https://mozilla.org/MPL/2.0/.
 package io.vlingo.symbio.store.state.geode;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import org.apache.geode.cache.GemFireCache;
 import org.apache.geode.cache.Region;
 
 import io.vlingo.actors.Actor;
+import io.vlingo.actors.Definition;
+import io.vlingo.actors.Protocols;
 import io.vlingo.common.Failure;
 import io.vlingo.common.Success;
 import io.vlingo.symbio.Metadata;
@@ -21,54 +20,74 @@ import io.vlingo.symbio.State.ObjectState;
 import io.vlingo.symbio.StateAdapter;
 import io.vlingo.symbio.store.Result;
 import io.vlingo.symbio.store.StorageException;
+import io.vlingo.symbio.store.state.GeodeDispatchableSerializer;
+import io.vlingo.symbio.store.state.StatePdxSerializerRegistry;
 import io.vlingo.symbio.store.state.StateStore;
-import io.vlingo.symbio.store.state.StateStore.DispatcherControl;
 import io.vlingo.symbio.store.state.StateStoreAdapterAssistant;
 import io.vlingo.symbio.store.state.StateTypeStateStoreMap;
 /**
  * GeodeStateStoreActor is responsible for reading and writing
  * objects from/to a GemFire cache.
  */
-public class GeodeStateStoreActor extends Actor implements StateStore, DispatcherControl {
-  
+public class GeodeStateStoreActor extends Actor implements StateStore {
+    
   private final StateStoreAdapterAssistant adapterAssistant;
-  private final List<Dispatchable<ObjectState<Object>>> dispatchables;
   private final Dispatcher dispatcher;
-  //private final Configuration configuration;
   private final GemFireCache cache;
+  private final RedispatchControl redispatchControl;
 
-  public GeodeStateStoreActor(final Dispatcher aDispatcher, final Configuration aConfiguration) {
-    this.dispatchables = new ArrayList<>();
-
-    if (aDispatcher == null) {
+  public GeodeStateStoreActor(final Dispatcher dispatcher, final Configuration configuration) {
+    this(dispatcher, configuration, 1000L, 1000L);
+  }
+  
+  public GeodeStateStoreActor(final Dispatcher dispatcher, final Configuration configuration, long checkConfirmationExpirationInterval, final long confirmationExpiration) {
+    if (dispatcher == null) {
       throw new IllegalArgumentException("Dispatcher must not be null.");
     }
-    this.dispatcher = aDispatcher;
+    this.dispatcher = dispatcher;
     
-    if (aConfiguration == null) {
+    if (configuration == null) {
       throw new IllegalArgumentException("Configuration must not be null.");
     }
-    //this.configuration = aConfiguration;
     
     this.adapterAssistant = new StateStoreAdapterAssistant();
-    this.cache = GemFireCacheProvider.getAnyInstance(aConfiguration);
+    this.cache = GemFireCacheProvider.getAnyInstance(configuration);
+    
+    StatePdxSerializerRegistry.serializeTypeWith(GeodeDispatchable.class, GeodeDispatchableSerializer.class);
 
-    dispatcher.controlWith(selfAs(DispatcherControl.class));
+    Protocols protocols = stage().actorFor(
+      new Class[] { DispatcherControl.class, RedispatchControl.class },
+      Definition.has(GeodeRedispatchControlActor.class, Definition.parameters(dispatcher, cache, checkConfirmationExpirationInterval, confirmationExpiration))
+    );
+    final DispatcherControl control = protocols.get(0);
+    redispatchControl = protocols.get(1);
+
+    dispatcher.controlWith(control);
+    control.dispatchUnconfirmed();
   }
 
-  @Override
-  public void confirmDispatched(final String dispatchId, final ConfirmDispatchedResultInterest interest) {
-    dispatchables.remove(new Dispatchable<ObjectState<Object>>(dispatchId, null));
-    interest.confirmDispatchedResultedIn(Result.Success, dispatchId);
-  }
 
+  /* @see io.vlingo.actors.Actor#afterStop() */
   @Override
-  public void dispatchUnconfirmed() {
-    for (int idx = 0; idx < dispatchables.size(); ++idx) {
-      final Dispatchable<ObjectState<Object>> dispatchable = dispatchables.get(idx);
-      dispatch(dispatchable.id, dispatchable.state);
+  protected void afterStop() {
+    if (redispatchControl != null) {
+      redispatchControl.stop();
     }
   }
+
+//  @Override
+//  public void confirmDispatched(final String dispatchId, final ConfirmDispatchedResultInterest interest) {
+//    dispatchables.remove(new Dispatchable<ObjectState<Object>>(dispatchId, null));
+//    interest.confirmDispatchedResultedIn(Result.Success, dispatchId);
+//  }
+//
+//  @Override
+//  public void dispatchUnconfirmed() {
+//    for (int idx = 0; idx < dispatchables.size(); ++idx) {
+//      final Dispatchable<ObjectState<Object>> dispatchable = dispatchables.get(idx);
+//      dispatch(dispatchable.id, dispatchable.state);
+//    }
+//  }
 
   protected void dispatch(final String dispatchId, final ObjectState<Object> state) {
     dispatcher.dispatch(dispatchId, state);
@@ -105,8 +124,6 @@ public class GeodeStateStoreActor extends Actor implements StateStore, Dispatche
       }
       
       final String storeName = StateTypeStateStoreMap.storeNameFrom(type);
-      logger().log("readFor - storeName: " + storeName);
-
       if (storeName == null) {
         interest.readResultedIn(
           Failure.of(new StorageException(Result.NoTypeStore, "No type store.")),
@@ -119,8 +136,6 @@ public class GeodeStateStoreActor extends Actor implements StateStore, Dispatche
       }
 
       final Region<Object, ObjectState<Object>> typeStore = cache.getRegion(storeName);
-      logger().log("readFor - typeStore: " + typeStore);
-
       if (typeStore == null) {
         interest.readResultedIn(
           Failure.of(new StorageException(Result.NotFound, "Store not found: " + storeName)),
@@ -133,12 +148,11 @@ public class GeodeStateStoreActor extends Actor implements StateStore, Dispatche
       }
 
       final ObjectState<Object> raw = typeStore.get(id);
-      logger().log("readFor - state: " + raw);
-
       if (raw != null) {
         final Object state = adapterAssistant.adaptFromRawState(raw);
         interest.readResultedIn(Success.of(Result.Success), id, state, raw.dataVersion, raw.metadata, object);
-      } else {
+      } 
+      else {
         interest.readResultedIn(
           Failure.of(new StorageException(Result.NotFound, "Not found.")),
           id,
@@ -147,7 +161,8 @@ public class GeodeStateStoreActor extends Actor implements StateStore, Dispatche
           null,
           object);
       }
-    } else {
+    } 
+    else {
       logger().log(getClass().getSimpleName() + " readFor() missing ReadResultInterest for: " + (id == null ? "unknown id" : id));
     }
   }
@@ -187,75 +202,83 @@ public class GeodeStateStoreActor extends Actor implements StateStore, Dispatche
   }
 
   protected <S> void writeWith(final String id, final S state, final int stateVersion, final Metadata metadata, final WriteResultInterest interest, final Object object) {
-    if (interest != null) {
-      if (state == null) {
-        interest.writeResultedIn(
-          Failure.of(new StorageException(Result.Error, "The state is null.")),
+        
+    if (interest == null) {
+      logger().log(
+        getClass().getSimpleName() + 
+        " writeWith() missing WriteResultInterest for: " +
+        (state == null ? "unknown id" : id));
+      return;
+    }
+    
+    if (state == null) {
+      interest.writeResultedIn(
+        Failure.of(new StorageException(Result.Error, "The state is null.")),
+        id,
+        state,
+        stateVersion,
+        object);
+      return;
+    }
+    
+    final String storeName = StateTypeStateStoreMap.storeNameFrom(state.getClass());
+    if (storeName == null) {
+      interest.writeResultedIn(
+        Failure.of(new StorageException(Result.NoTypeStore, "Store not configured: " + storeName)),
+        id,
+        state,
+        stateVersion,
+        object);
+      return;
+    }
+
+    Region<Object, State<Object>> typeStore = cache.getRegion(storeName);
+    if (typeStore == null) {
+      interest.writeResultedIn(
+          Failure.of(new StorageException(Result.NoTypeStore, "Store not found: " + storeName)),
           id,
           state,
           stateVersion,
           object);
-      } else {
-        try {
-          final String storeName = StateTypeStateStoreMap.storeNameFrom(state.getClass());
-          logger().log("writeWith - storeName: " + storeName);
-
-          if (storeName == null) {
-            interest.writeResultedIn(Failure.of(new StorageException(Result.NoTypeStore, "Store not configured: " + storeName)),
-              id,
-              state,
-              stateVersion,
-              object);
-            return;
-          }
-
-          Region<Object, State<Object>> typeStore = cache.getRegion(storeName);
-          logger().log("writeWith - typeStore: " + typeStore);
-
-          if (typeStore == null) {
-            interest.writeResultedIn(
-                Failure.of(new StorageException(Result.NoTypeStore, "Store not found: " + storeName)),
-                id,
-                state,
-                stateVersion,
-                object);
-            return;
-          }
-
-          final ObjectState<Object> raw = metadata == null ?
-                  adapterAssistant.adaptToRawState(state, stateVersion) :
-                  adapterAssistant.adaptToRawState(state, stateVersion, metadata);
-
-          final State<Object> persistedState = typeStore.putIfAbsent(id, raw);
-          if (persistedState != null) {
-            if (persistedState.dataVersion >= raw.dataVersion) {
-              interest.writeResultedIn(
-                Failure.of(new StorageException(Result.ConcurrentyViolation, "Version conflict.")),
-                id,
-                state,
-                stateVersion,
-                object);
-              return;
-            }
-            typeStore.put(id, raw);
-          }
-          
-          final String dispatchId = storeName + ":" + id;
-          dispatchables.add(new Dispatchable<>(dispatchId, raw));
-          dispatch(dispatchId, raw);
-
-          interest.writeResultedIn(Success.of(Result.Success), id, state, stateVersion, object);
-          
-        } catch (Exception e) {
-          logger().log(getClass().getSimpleName() + " writeWith() error because: " + e.getMessage(), e);
-          interest.writeResultedIn(Failure.of(new StorageException(Result.Error, e.getMessage(), e)), id, state, stateVersion, object);
+      return;
+    }
+    
+    final ObjectState<Object> raw = (metadata == null)
+      ? adapterAssistant.adaptToRawState(state, stateVersion)
+      : adapterAssistant.adaptToRawState(state, stateVersion, metadata);
+    
+    try {
+      final State<Object> persistedState = typeStore.putIfAbsent(id, raw);
+      if (persistedState != null) {
+        if (persistedState.dataVersion >= raw.dataVersion) {
+          interest.writeResultedIn(
+            Failure.of(new StorageException(Result.ConcurrentyViolation, "Version conflict.")),
+            id,
+            state,
+            stateVersion,
+            object);
+          return;
         }
+        typeStore.put(id, raw);
       }
-    } else {
-      logger().log(
-        getClass().getSimpleName() +
-        " writeWith() missing WriteResultInterest for: " +
-        (state == null ? "unknown id" : id));
+      //System.out.println("wrote " + id + " to " + typeStore.getName());
+      final long writeTimestamp = System.currentTimeMillis();
+
+      
+      final String dispatchId = storeName + ":" + id;
+      
+      Region<String, GeodeDispatchable<ObjectState<Object>>> dispatchablesRegion =
+        cache.getRegion(GeodeQueries.DISPATCHABLES_REGION_NAME);
+      dispatchablesRegion.put(dispatchId, new GeodeDispatchable<>(writeTimestamp, dispatchId, raw));
+      //System.out.println("wrote " + dispatchId + " to " + GeodeQueries.DISPATCHABLES_REGION_NAME);
+      
+      dispatch(dispatchId, raw);
+      
+      interest.writeResultedIn(Success.of(Result.Success), id, state, stateVersion, object);
+    }
+    catch (Exception e) {
+      logger().log(getClass().getSimpleName() + " writeWith() error because: " + e.getMessage(), e);
+      interest.writeResultedIn(Failure.of(new StorageException(Result.Error, e.getMessage(), e)), id, state, stateVersion, object);
     }
   }
 }

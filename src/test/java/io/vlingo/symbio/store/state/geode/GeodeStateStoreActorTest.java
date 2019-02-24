@@ -21,8 +21,10 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import io.vlingo.actors.World;
-import io.vlingo.actors.testkit.TestUntil;
+import io.vlingo.actors.testkit.AccessSafely;
+import io.vlingo.actors.testkit.TestWorld;
 import io.vlingo.symbio.Metadata;
+import io.vlingo.symbio.State;
 import io.vlingo.symbio.State.ObjectState;
 import io.vlingo.symbio.store.Result;
 import io.vlingo.symbio.store.state.Entity1;
@@ -41,43 +43,45 @@ public class GeodeStateStoreActorTest {
   
   private static ServerLauncher serverLauncher;
   private static Configuration configuration;
+  
   private MockObjectDispatcher dispatcher;
   private MockObjectResultInterest interest;
   private StateStore store;
+  private TestWorld testWorld;
   private World world;
   
   @Test
   public void testThatStateStoreWritesText() {
+    final AccessSafely access1 = interest.afterCompleting(1);
+    dispatcher.afterCompleting(1);
+
     final Entity1 entity = new Entity1("123", 5);
-    interest.until = TestUntil.happenings(1);
 
     store.write(entity.id, entity, 1, interest);
 
-    interest.until.completes();
-
-    assertEquals(0, interest.readObjectResultedIn.get());
-    assertEquals(1, interest.writeObjectResultedIn.get());
-    assertEquals(Result.Success, interest.objectWriteResult.get());
-    assertEquals(entity, interest.objectState.get());
+    assertEquals(0, (int) access1.readFrom("readObjectResultedIn"));
+    assertEquals(1, (int) access1.readFrom("writeObjectResultedIn"));
+    assertEquals(Result.Success, access1.readFrom("objectWriteResult"));
+    assertEquals(entity, access1.readFrom("objectState"));
   }
-  
+
   @Test
   public void testThatStateStoreWritesAndReadsObject() {
+    
+    final AccessSafely access1 = interest.afterCompleting(2);
+    dispatcher.afterCompleting(2);
+
     final Entity1 entity = new Entity1("123", 5);
-    interest.until = TestUntil.happenings(3);
 
     store.write(entity.id, entity, 1, interest);
     store.read(entity.id, Entity1.class, interest);
 
-    interest.until.completes();
+    assertEquals(1, (int) access1.readFrom("readObjectResultedIn"));
+    assertEquals(1, (int) access1.readFrom("writeObjectResultedIn"));
+    assertEquals(Result.Success, access1.readFrom("objectReadResult"));
+    assertEquals(entity, access1.readFrom("objectState"));
 
-    assertEquals(1, interest.readObjectResultedIn.get());
-    assertEquals(1, interest.writeObjectResultedIn.get());
-    assertEquals(Result.Success, interest.objectReadResult.get());
-    assertEquals(entity, interest.objectState.get());
-    assertNotNull(interest.metadataHolder.get());
-
-    final Entity1 readEntity = (Entity1) interest.objectState.get();
+    final Entity1 readEntity = (Entity1) access1.readFrom("objectState");
 
     assertEquals("123", readEntity.id);
     assertEquals(5, readEntity.value);
@@ -85,23 +89,24 @@ public class GeodeStateStoreActorTest {
 
   @Test
   public void testThatStateStoreWritesAndReadsMetadataValue() {
+    final AccessSafely access1 = interest.afterCompleting(2);
+    dispatcher.afterCompleting(2);
+
     final Entity1 entity = new Entity1("123", 5);
-    interest.until = TestUntil.happenings(2);
 
     store.write(entity.id, entity, 1, interest);
     store.read(entity.id, Entity1.class, interest);
 
-    interest.until.completes();
+    assertEquals(1, (int) access1.readFrom("readObjectResultedIn"));
+    assertEquals(1, (int) access1.readFrom("writeObjectResultedIn"));
+    assertEquals(Result.Success, access1.readFrom("objectReadResult"));
+    assertEquals(entity, access1.readFrom("objectState"));
+    assertNotNull(access1.readFrom("metadataHolder"));
+    final Metadata metadata = access1.readFrom("metadataHolder");
+    assertTrue(metadata.hasValue());
+    assertEquals("value", metadata.value);
 
-    assertEquals(1, interest.readObjectResultedIn.get());
-    assertEquals(1, interest.writeObjectResultedIn.get());
-    assertEquals(Result.Success, interest.objectReadResult.get());
-    assertEquals(entity, interest.objectState.get());
-    assertNotNull(interest.metadataHolder.get());
-    assertTrue(interest.metadataHolder.get().hasValue());
-    assertEquals("value", interest.metadataHolder.get().value);
-
-    final Entity1 readEntity = (Entity1) interest.objectState.get();
+    final Entity1 readEntity = (Entity1) access1.readFrom("objectState");
 
     assertEquals("123", readEntity.id);
     assertEquals(5, readEntity.value);
@@ -109,49 +114,24 @@ public class GeodeStateStoreActorTest {
 
   @Test
   public void testThatStateStoreWritesAndReadsMetadataOperation() {
+    final AccessSafely access1 = interest.afterCompleting(2);
+    dispatcher.afterCompleting(2);
+
     final Entity1 entity = new Entity1("123", 5);
-    interest.until = TestUntil.happenings(2);
 
     store.write(entity.id, entity, 1, interest);
     store.read(entity.id, Entity1.class, interest);
 
-    interest.until.completes();
+    assertEquals(1, (int) access1.readFrom("readObjectResultedIn"));
+    assertEquals(1, (int) access1.readFrom("writeObjectResultedIn"));
+    assertEquals(Result.Success, access1.readFrom("objectReadResult"));
+    assertEquals(entity, access1.readFrom("objectState"));
+    final Metadata metadata = access1.readFrom("metadataHolder");
+    assertNotNull(metadata);
+    assertTrue(metadata.hasOperation());
+    assertEquals("op", metadata.operation);
 
-    assertEquals(1, interest.readObjectResultedIn.get());
-    assertEquals(1, interest.writeObjectResultedIn.get());
-    assertEquals(Result.Success, interest.objectReadResult.get());
-    assertEquals(entity, interest.objectState.get());
-    assertNotNull(interest.metadataHolder.get());
-    assertTrue(interest.metadataHolder.get().hasOperation());
-    assertEquals("op", interest.metadataHolder.get().operation);
-
-    final Entity1 readEntity = (Entity1) interest.objectState.get();
-
-    assertEquals("123", readEntity.id);
-    assertEquals(5, readEntity.value);
-  }
-
-  @Test
-  public void testThatStateStoreWritesAndReadsMetadata() {
-    final Entity1 entity = new Entity1("123", 5);
-    interest.until = TestUntil.happenings(3);
-
-    store.write(entity.id, entity, 1, interest);
-    store.read(entity.id, Entity1.class, interest);
-
-    interest.until.completes();
-
-    assertEquals(1, interest.readObjectResultedIn.get());
-    assertEquals(1, interest.writeObjectResultedIn.get());
-    assertEquals(Result.Success, interest.objectReadResult.get());
-    assertEquals(entity, interest.objectState.get());
-    assertNotNull(interest.metadataHolder.get());
-    assertTrue(interest.metadataHolder.get().hasValue());
-    assertEquals("value", interest.metadataHolder.get().value);
-    assertTrue(interest.metadataHolder.get().hasOperation());
-    assertEquals("op", interest.metadataHolder.get().operation);
-
-    final Entity1 readEntity = (Entity1) interest.objectState.get();
+    final Entity1 readEntity = (Entity1) access1.readFrom("objectState");
 
     assertEquals("123", readEntity.id);
     assertEquals(5, readEntity.value);
@@ -159,34 +139,36 @@ public class GeodeStateStoreActorTest {
 
   @Test
   public void testThatConcurrencyViolationsDetected() {
+    final AccessSafely access1 = interest.afterCompleting(2);
+    dispatcher.afterCompleting(2);
+
     final Entity1 entity = new Entity1("123", 5);
 
-    interest.until = TestUntil.happenings(4);
     store.write(entity.id, entity, 1, interest);
     store.write(entity.id, entity, 2, interest);
-    interest.until.completes();
 
-    assertEquals(2, interest.objectWriteAccumulatedResults.size());
-    assertEquals(Result.Success, interest.objectWriteAccumulatedResults.poll());
-    assertEquals(Result.Success, interest.objectWriteAccumulatedResults.poll());
+    assertEquals(2, (int) access1.readFrom("objectWriteAccumulatedResultsCount"));
+    assertEquals(Result.Success, access1.readFrom("objectWriteAccumulatedResults"));
+    assertEquals(Result.Success, access1.readFrom("objectWriteAccumulatedResults"));
+    assertEquals(0, (int) access1.readFrom("objectWriteAccumulatedResultsCount"));
 
-    interest.until = TestUntil.happenings(4);
+    final AccessSafely access2 = interest.afterCompleting(3);
+    dispatcher.afterCompleting(3);
+
     store.write(entity.id, entity, 1, interest);
     store.write(entity.id, entity, 2, interest);
     store.write(entity.id, entity, 3, interest);
-    interest.until.completes();
 
-    assertEquals(3, interest.objectWriteAccumulatedResults.size());
-    assertEquals(Result.ConcurrentyViolation, interest.objectWriteAccumulatedResults.poll());
-    assertEquals(Result.ConcurrentyViolation, interest.objectWriteAccumulatedResults.poll());
-    assertEquals(Result.Success, interest.objectWriteAccumulatedResults.poll());
+    assertEquals(3, (int) access2.readFrom("objectWriteAccumulatedResultsCount"));
+    assertEquals(Result.ConcurrentyViolation, access2.readFrom("objectWriteAccumulatedResults"));
+    assertEquals(Result.ConcurrentyViolation, access2.readFrom("objectWriteAccumulatedResults"));
+    assertEquals(Result.Success, access2.readFrom("objectWriteAccumulatedResults"));
   }
 
   @Test
   public void testThatStateStoreDispatches() {
-    interest.until = TestUntil.happenings(3);
-
-    dispatcher.until = TestUntil.happenings(3);
+    interest.afterCompleting(3);
+    final AccessSafely accessDispatcher = dispatcher.afterCompleting(3);
 
     final Entity1 entity1 = new Entity1("123", 1);
     store.write(entity1.id, entity1, 1, interest);
@@ -195,62 +177,111 @@ public class GeodeStateStoreActorTest {
     final Entity1 entity3 = new Entity1("345", 3);
     store.write(entity3.id, entity3, 1, interest);
 
-    interest.until.completes();
-    dispatcher.until.completes();
+    assertEquals(3, (int) accessDispatcher.readFrom("dispatchedStateCount"));
+    final State<?> state123 = accessDispatcher.readFrom("dispatchedState", dispatchId("123"));
+    assertEquals("123", state123.id);
+    final State<?> state234 = accessDispatcher.readFrom("dispatchedState", dispatchId("234"));
+    assertEquals("234", state234.id);
+    final State<?> state345 = accessDispatcher.readFrom("dispatchedState", dispatchId("345"));
+    assertEquals("345", state345.id);
 
-    assertEquals(3, dispatcher.dispatched.size());
-    assertEquals("123", dispatcher.dispatched.get(dispatchId("123")).id);
-    assertEquals("234", dispatcher.dispatched.get(dispatchId("234")).id);
-    assertEquals("345", dispatcher.dispatched.get(dispatchId("345")).id);
+    interest.afterCompleting(4);
+    final AccessSafely accessDispatcher1 = dispatcher.afterCompleting(4);
 
-    interest.until = TestUntil.happenings(5);
-    dispatcher.until = TestUntil.happenings(2);
-
-    dispatcher.processDispatch.set(false);
+    accessDispatcher1.writeUsing("processDispatch", false);
     final Entity1 entity4 = new Entity1("456", 4);
     store.write(entity4.id, entity4, 1, interest);
     final Entity1 entity5 = new Entity1("567", 5);
     store.write(entity5.id, entity5, 1, interest);
-    dispatcher.processDispatch.set(true);
-    dispatcher.control.dispatchUnconfirmed();
 
-    dispatcher.until.completes();
-    interest.until.completes();
+    accessDispatcher1.writeUsing("processDispatch", true);
+    dispatcher.dispatchUnconfirmed();
+    accessDispatcher1.readFrom("dispatchedStateCount");
 
-    assertEquals(5, dispatcher.dispatched.size());
-    assertEquals("456", dispatcher.dispatched.get(dispatchId("456")).id);
-    assertEquals("567", dispatcher.dispatched.get(dispatchId("567")).id);
+    assertEquals(5, (int) accessDispatcher1.readFrom("dispatchedStateCount"));
+
+    final State<?> state456 = accessDispatcher1.readFrom("dispatchedState", dispatchId("456"));
+    assertEquals("456", state456.id);
+    final State<?> state567 = accessDispatcher1.readFrom("dispatchedState", dispatchId("567"));
+    assertEquals("567", state567.id);
   }
 
   @Test
   public void testThatReadErrorIsReported() {
-    interest.until = TestUntil.happenings(3);
+    final AccessSafely access1 = interest.afterCompleting(2);
+    dispatcher.afterCompleting(2);
+
     final Entity1 entity = new Entity1("123", 1);
     store.write(entity.id, entity, 1, interest);
     store.read(null, Entity1.class, interest);
-    interest.until.completes();
-    assertEquals(1, interest.errorCauses.size());
-    assertEquals("The id is null.", interest.errorCauses.poll().getMessage());
-    assertTrue(interest.objectReadResult.get().isError());
-    
-    interest.until = TestUntil.happenings(1);
+
+    assertEquals(1, (int) access1.readFrom("errorCausesCount"));
+    final Exception cause1 = access1.readFrom("errorCauses");
+    assertEquals("The id is null.", cause1.getMessage());
+    Result result1 = access1.readFrom("objectReadResult");
+    assertTrue(result1.isError());
+
+    interest = new MockObjectResultInterest();
+    final AccessSafely access2 = interest.afterCompleting(1);
+    dispatcher.afterCompleting(1);
+
     store.read(entity.id, null, interest);
-    interest.until.completes();
-    assertEquals("The type is null.", interest.errorCauses.poll().getMessage());
-    assertTrue(interest.objectReadResult.get().isError());
-    assertNull(interest.objectState.get());
+
+    final Exception cause2 = access2.readFrom("errorCauses");
+    assertEquals("The type is null.", cause2.getMessage());
+    Result result2 = access2.readFrom("objectReadResult");
+    assertTrue(result2.isError());
+    final Object objectState = access2.readFrom("objectState");
+    assertNull(objectState);
   }
 
   @Test
   public void testThatWriteErrorIsReported() {
-    interest.until = TestUntil.happenings(1);
+    final AccessSafely access1 = interest.afterCompleting(1);
+    dispatcher.afterCompleting(1);
+
     store.write(null, null, 0, interest);
-    interest.until.completes();
-    assertEquals(1, interest.errorCauses.size());
-    assertEquals("The state is null.", interest.errorCauses.poll().getMessage());
-    assertTrue(interest.objectWriteAccumulatedResults.poll().isError());
-    assertNull(interest.objectState.get());
+
+    assertEquals(1, (int) access1.readFrom("errorCausesCount"));
+    final Exception cause1 = access1.readFrom("errorCauses");
+    assertEquals("The state is null.", cause1.getMessage());
+    final Result result1 = access1.readFrom("objectWriteAccumulatedResults");
+    assertTrue(result1.isError());
+    final Object objectState = access1.readFrom("objectState");
+    assertNull(objectState);
   }
+  
+  @Test
+  public void testRedispatch() {
+    interest.afterCompleting(1);
+    final AccessSafely accessDispatcher = dispatcher.afterCompleting(5);
+
+    accessDispatcher.writeUsing("processDispatch", false);
+    
+    final Entity1 entity1 = new Entity1("123", 1);
+    store.write(entity1.id, entity1, 1, interest);
+    final Entity1 entity2 = new Entity1("234", 2);
+    store.write(entity2.id, entity2, 1, interest);
+    final Entity1 entity3 = new Entity1("345", 3);
+    store.write(entity3.id, entity3, 1, interest);
+
+    try {
+      Thread.sleep(2000);
+    }
+    catch (InterruptedException ex) {
+      //ignored
+    }
+    
+    accessDispatcher.writeUsing("processDispatch", true);
+
+    int dispatchedStateCount = accessDispatcher.readFrom("dispatchedStateCount");
+    System.out.println("GeodeStateStoreActorTest::testRedispatch - dispatchedStateCount=" + dispatchedStateCount);
+    assertTrue("dispatchedStateCount", dispatchedStateCount == 3);
+    
+    int dispatchAttemptCount = accessDispatcher.readFrom("dispatchAttemptCount");
+    System.out.println("GeodeStateStoreActorTest::testRedispatch - dispatchAttemptCount=" + dispatchAttemptCount);
+    assertTrue("dispatchAttemptCount", dispatchAttemptCount > 1);
+}
   
   @BeforeClass
   public static void beforeAllTests() {
@@ -273,16 +304,17 @@ public class GeodeStateStoreActorTest {
   
   @Before
   public void beforeEachTest() {
-    createWorld();
-  }
-  
-  protected void createWorld() {
-    world = World.startWithDefaults("test-store");
-    interest = new MockObjectResultInterest(0);
-    dispatcher = new MockObjectDispatcher(0, interest);
+    testWorld = TestWorld.startWithDefaults("test-store");
+    world = testWorld.world();
+    
+    interest = new MockObjectResultInterest();
+    dispatcher = new MockObjectDispatcher(interest);
+    
     configuration = Configuration.forPeer();
+    
     store = world.actorFor(StateStore.class, GeodeStateStoreActor.class, dispatcher, configuration);
     store.registerAdapter(Entity1.class, new Entity1StateAdapter());
+    
     StateTypeStateStoreMap.stateTypeToStoreName(Entity1.class, StoreName);
   }
   
@@ -322,6 +354,12 @@ public class GeodeStateStoreActorTest {
     if (region != null) {
       for (String key : region.keySet()) {
         region.remove(key);
+      }
+    }
+    Region<String, ObjectState> dispatchablesRegion = cache.getRegion(GeodeQueries.DISPATCHABLES_REGION_NAME);
+    if (dispatchablesRegion != null) {
+      for (String key : dispatchablesRegion.keySet()) {
+        dispatchablesRegion.remove(key);
       }
     }
   }

@@ -8,6 +8,8 @@
 			<class-name>io.vlingo.symbio.store.state.StatePdxSerializer</class-name>
 		</pdx-serializer>
 	</pdx>
+	<region name="vlingo-dispatchables" refid="PARTITION_REDUNDANT">
+	</region>
 	<region name="Entity1" refid="PARTITION_REDUNDANT">
 	</region>
 </cache>
