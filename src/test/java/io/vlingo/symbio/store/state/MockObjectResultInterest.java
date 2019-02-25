@@ -12,7 +12,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import io.vlingo.actors.testkit.AccessSafely;
-import io.vlingo.actors.testkit.TestUntil;
 import io.vlingo.common.Outcome;
 import io.vlingo.symbio.Metadata;
 import io.vlingo.symbio.store.Result;
@@ -31,7 +30,6 @@ public class MockObjectResultInterest
   public AtomicInteger confirmDispatchedResultedIn = new AtomicInteger(0);
   public AtomicInteger readObjectResultedIn = new AtomicInteger(0);
   public AtomicInteger writeObjectResultedIn = new AtomicInteger(0);
-  public TestUntil until;
 
   public AtomicReference<Result> objectReadResult = new AtomicReference<>();
   public AtomicReference<Result> objectWriteResult = new AtomicReference<>();
@@ -45,23 +43,20 @@ public class MockObjectResultInterest
 
   @Override
   public void confirmDispatchedResultedIn(final Result result, final String dispatchId) {
-    //System.out.println("MockObjectResultInterest::confirmDispatchedResultedIn - for dispatchId=" + dispatchId + " on " + Thread.currentThread().getName());
     confirmDispatchedResultedIn.incrementAndGet();
   }
 
   @Override
   public <S> void readResultedIn(final Outcome<StorageException, Result> outcome, final String id, final S state, final int stateVersion, final Metadata metadata, final Object object) {
     outcome
-    .andThen(result -> {
-      access.writeUsing("readStoreData", new StoreData(1, result, state, metadata, null));
-      //System.out.println("MockObjectResultInterest::readResultedIn - andThen wrote readStoreData");
-      return result;
-    })
-    .otherwise(cause -> {
-      access.writeUsing("readStoreData", new StoreData(1, cause.result, state, metadata, cause));
-      //System.out.println("MockObjectResultInterest::readResultedIn - otherwise wrote readStoreData");
-      return cause.result;
-    });
+      .andThen(result -> { 
+        access.writeUsing("readStoreData", new StoreData(1, result, state, metadata, null));
+        return result;
+      })
+      .otherwise(cause -> {
+        access.writeUsing("readStoreData", new StoreData(1, cause.result, state, metadata, cause));
+        return cause.result;
+      });
   }
 
   @Override
@@ -69,21 +64,19 @@ public class MockObjectResultInterest
     outcome
       .andThen(result -> {
         access.writeUsing("writeStoreData", new StoreData(1, result, state, null, null));
-        //System.out.println("MockObjectResultInterest::writeResultedIn - andThen wrote writeStoreData");
         return result;
       })
       .otherwise(cause -> {
         access.writeUsing("writeStoreData", new StoreData(1, cause.result, state, null, cause));
-        //System.out.println("MockObjectResultInterest::writeResultedIn - otherwise wrote writeStoreData");
         return cause.result;
       });
   }
 
 
   public AccessSafely afterCompleting(final int times) {
-    access = AccessSafely.afterCompleting(times);
-
-    access
+    access = AccessSafely
+      .afterCompleting(times)
+      
       .writingWith("confirmDispatchedResultedIn", (Integer increment) -> confirmDispatchedResultedIn.addAndGet(increment))
       .readingWith("confirmDispatchedResultedIn", () -> confirmDispatchedResultedIn.get())
 
