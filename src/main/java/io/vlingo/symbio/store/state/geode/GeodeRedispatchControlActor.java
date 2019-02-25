@@ -80,16 +80,8 @@ implements DispatcherControl, RedispatchControl, Scheduled<Object> {
   
   @SuppressWarnings("unchecked")
   private Collection<GeodeDispatchable<ObjectState<Object>>> allUnconfirmedDispatchables() throws Exception {
-    
-    Region<String, Object> r = cache.getRegion(GeodeQueries.DISPATCHABLES_REGION_NAME);
-    Set<String> keys = r.keySet();
-    for (Object key: keys) {
-      //System.out.println("key: " + key + " value: " + r.get(key));
-    }
-    
     SelectResults<GeodeDispatchable<ObjectState<Object>>> selected =
       (SelectResults<GeodeDispatchable<ObjectState<Object>>>) allUnconfirmedDispatchablesQuery().execute(originatorId);
-    
     //System.out.println("GeodeRedispatchControlActor::allUnconfirmedDispatchables - selected " + selected.size() + " dispatchables");
     List<GeodeDispatchable<ObjectState<Object>>> dispatchables =
             new ArrayList<GeodeDispatchable<ObjectState<Object>>>();
