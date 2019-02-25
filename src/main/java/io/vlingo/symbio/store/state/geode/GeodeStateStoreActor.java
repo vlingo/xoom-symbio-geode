@@ -31,33 +31,37 @@ import io.vlingo.symbio.store.state.StateTypeStateStoreMap;
  */
 public class GeodeStateStoreActor extends Actor implements StateStore {
     
+  private final String originatorId;
   private final StateStoreAdapterAssistant adapterAssistant;
   private final Dispatcher dispatcher;
   private final GemFireCache cache;
   private final RedispatchControl redispatchControl;
 
-  public GeodeStateStoreActor(final Dispatcher dispatcher, final Configuration configuration) {
-    this(dispatcher, configuration, 1000L, 1000L);
+  public GeodeStateStoreActor(final String originatorId, final Dispatcher dispatcher, final Configuration configuration) {
+    this(originatorId, dispatcher, configuration, 1000L, 1000L);
   }
   
-  public GeodeStateStoreActor(final Dispatcher dispatcher, final Configuration configuration, long checkConfirmationExpirationInterval, final long confirmationExpiration) {
-    if (dispatcher == null) {
-      throw new IllegalArgumentException("Dispatcher must not be null.");
-    }
+  public GeodeStateStoreActor(final String originatorId, final Dispatcher dispatcher, final Configuration configuration, long checkConfirmationExpirationInterval, final long confirmationExpiration) {
+    
+    if (originatorId == null)
+      throw new IllegalArgumentException("originatorId must not be null.");
+    this.originatorId = originatorId;
+    
+    if (dispatcher == null)
+      throw new IllegalArgumentException("dispatcher must not be null.");
     this.dispatcher = dispatcher;
     
-    if (configuration == null) {
-      throw new IllegalArgumentException("Configuration must not be null.");
-    }
+    if (configuration == null)
+      throw new IllegalArgumentException("configuration must not be null.");
+    this.cache = GemFireCacheProvider.getAnyInstance(configuration);
     
     this.adapterAssistant = new StateStoreAdapterAssistant();
-    this.cache = GemFireCacheProvider.getAnyInstance(configuration);
     
     StatePdxSerializerRegistry.serializeTypeWith(GeodeDispatchable.class, GeodeDispatchableSerializer.class);
 
     Protocols protocols = stage().actorFor(
       new Class[] { DispatcherControl.class, RedispatchControl.class },
-      Definition.has(GeodeRedispatchControlActor.class, Definition.parameters(dispatcher, cache, checkConfirmationExpirationInterval, confirmationExpiration))
+      Definition.has(GeodeRedispatchControlActor.class, Definition.parameters(originatorId, dispatcher, cache, checkConfirmationExpirationInterval, confirmationExpiration))
     );
     final DispatcherControl control = protocols.get(0);
     redispatchControl = protocols.get(1);
@@ -74,20 +78,6 @@ public class GeodeStateStoreActor extends Actor implements StateStore {
       redispatchControl.stop();
     }
   }
-
-//  @Override
-//  public void confirmDispatched(final String dispatchId, final ConfirmDispatchedResultInterest interest) {
-//    dispatchables.remove(new Dispatchable<ObjectState<Object>>(dispatchId, null));
-//    interest.confirmDispatchedResultedIn(Result.Success, dispatchId);
-//  }
-//
-//  @Override
-//  public void dispatchUnconfirmed() {
-//    for (int idx = 0; idx < dispatchables.size(); ++idx) {
-//      final Dispatchable<ObjectState<Object>> dispatchable = dispatchables.get(idx);
-//      dispatch(dispatchable.id, dispatchable.state);
-//    }
-//  }
 
   protected void dispatch(final String dispatchId, final ObjectState<Object> state) {
     dispatcher.dispatch(dispatchId, state);
@@ -263,13 +253,12 @@ public class GeodeStateStoreActor extends Actor implements StateStore {
       }
       //System.out.println("wrote " + id + " to " + typeStore.getName());
       final long writeTimestamp = System.currentTimeMillis();
-
       
       final String dispatchId = storeName + ":" + id;
       
       Region<String, GeodeDispatchable<ObjectState<Object>>> dispatchablesRegion =
         cache.getRegion(GeodeQueries.DISPATCHABLES_REGION_NAME);
-      dispatchablesRegion.put(dispatchId, new GeodeDispatchable<>(writeTimestamp, dispatchId, raw));
+      dispatchablesRegion.put(dispatchId, new GeodeDispatchable<>(originatorId, writeTimestamp, dispatchId, raw));
       //System.out.println("wrote " + dispatchId + " to " + GeodeQueries.DISPATCHABLES_REGION_NAME);
       
       dispatch(dispatchId, raw);

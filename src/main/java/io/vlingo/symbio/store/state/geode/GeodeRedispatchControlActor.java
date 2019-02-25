@@ -9,6 +9,7 @@ package io.vlingo.symbio.store.state.geode;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Set;
 
 import org.apache.geode.cache.Cache;
 import org.apache.geode.cache.Region;
@@ -36,23 +37,23 @@ public class GeodeRedispatchControlActor extends Actor
 implements DispatcherControl, RedispatchControl, Scheduled<Object> {
 
   private final Cache cache;
+  private final String originatorId;
   private final Dispatcher dispatcher;
   private final Cancellable cancellable;
   private Query allUnconfirmedDispatablesQuery;
   
-  public GeodeRedispatchControlActor(final Dispatcher dispatcher, final Cache cache, final long checkConfirmationExpirationInterval, final long confirmationExpiration) {
+  public GeodeRedispatchControlActor(final String originatorId, final Dispatcher dispatcher, final Cache cache, final long checkConfirmationExpirationInterval, final long confirmationExpiration) {
+    this.originatorId = originatorId;
     this.cache = cache;
     this.dispatcher = dispatcher;
     this.cancellable = scheduler().schedule(selfAs(Scheduled.class), null, confirmationExpiration, checkConfirmationExpirationInterval);
   }
   
-  /* @see io.vlingo.common.Scheduled#intervalSignal(io.vlingo.common.Scheduled, java.lang.Object) */
   @Override
   public void intervalSignal(Scheduled<Object> scheduled, Object data) {
     dispatchUnconfirmed();
   }
 
-  /* @see io.vlingo.symbio.store.state.StateStore.DispatcherControl#confirmDispatched(java.lang.String, io.vlingo.symbio.store.state.StateStore.ConfirmDispatchedResultInterest) */
   @Override
   public void confirmDispatched(String dispatchId, ConfirmDispatchedResultInterest interest) {
     //System.out.println("GeodeRedispatchControlActor::confirmDispatched - executing on " + Thread.currentThread().getName());
@@ -63,12 +64,11 @@ implements DispatcherControl, RedispatchControl, Scheduled<Object> {
     interest.confirmDispatchedResultedIn(Result.Success, dispatchId);
   }
 
-  /* @see io.vlingo.symbio.store.state.StateStore.DispatcherControl#dispatchUnconfirmed() */
   @Override
   public void dispatchUnconfirmed() {
     //System.out.println("GeodeRedispatchControlActor::dispatchUnconfirmed - executing on " + Thread.currentThread().getName());
     try {
-      Collection<GeodeDispatchable<ObjectState<Object>>> dispatchables = allUnconfirmedDispatchableStates();
+      Collection<GeodeDispatchable<ObjectState<Object>>> dispatchables = allUnconfirmedDispatchables();
       for (GeodeDispatchable<ObjectState<Object>> dispatchable : dispatchables) {
         //System.out.println("GeodeRedispatchControlActor::dispatchUnconfirmed - calling dispatcher.dispatch for " + dispatchable.id + " writtenAt " + dispatchable.writtenAt + " on " + Thread.currentThread().getName());
         dispatcher.dispatch(dispatchable.id, dispatchable.state);
@@ -79,11 +79,20 @@ implements DispatcherControl, RedispatchControl, Scheduled<Object> {
   }
   
   @SuppressWarnings("unchecked")
-  private Collection<GeodeDispatchable<ObjectState<Object>>> allUnconfirmedDispatchableStates() throws Exception {
-    List<GeodeDispatchable<ObjectState<Object>>> dispatchables =
-      new ArrayList<GeodeDispatchable<ObjectState<Object>>>();
+  private Collection<GeodeDispatchable<ObjectState<Object>>> allUnconfirmedDispatchables() throws Exception {
+    
+    Region<String, Object> r = cache.getRegion(GeodeQueries.DISPATCHABLES_REGION_NAME);
+    Set<String> keys = r.keySet();
+    for (Object key: keys) {
+      //System.out.println("key: " + key + " value: " + r.get(key));
+    }
+    
     SelectResults<GeodeDispatchable<ObjectState<Object>>> selected =
-      (SelectResults<GeodeDispatchable<ObjectState<Object>>>) allUnconfirmedDispatchablesQuery().execute();
+      (SelectResults<GeodeDispatchable<ObjectState<Object>>>) allUnconfirmedDispatchablesQuery().execute(originatorId);
+    
+    //System.out.println("GeodeRedispatchControlActor::allUnconfirmedDispatchables - selected " + selected.size() + " dispatchables");
+    List<GeodeDispatchable<ObjectState<Object>>> dispatchables =
+            new ArrayList<GeodeDispatchable<ObjectState<Object>>>();
     for (GeodeDispatchable<ObjectState<Object>> dispatchable : selected) {
       dispatchables.add(dispatchable);
     }

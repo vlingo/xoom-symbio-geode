@@ -13,7 +13,9 @@ public interface GeodeQueries {
   static final String DISPATCHABLES_REGION_NAME = "vlingo-dispatchables";
   
   static final String OQL_DISPATCHABLES_SELECT =
+    //"<trace> " +
     "SELECT DISTINCT * FROM /" +
     DISPATCHABLES_REGION_NAME +
+    " WHERE originatorId = $1" +
     " ORDER BY writtenAt ASC";
 }

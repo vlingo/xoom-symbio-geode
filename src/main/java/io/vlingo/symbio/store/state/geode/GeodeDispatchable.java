@@ -15,10 +15,25 @@ import io.vlingo.symbio.store.state.StateStore.Dispatchable;
 public class GeodeDispatchable<R extends State<?>> extends Dispatchable<R> {
   
   public final long writtenAt;
+  public final String originatorId;
   
-  public GeodeDispatchable(final long writtenAt, final String id, final R state) {
+  public GeodeDispatchable(final String originatorId, final long writtenAt, final String id, final R state) {
     super(id, state);
+    this.originatorId = originatorId;
     this.writtenAt = writtenAt;
+  }
+
+  /* @see java.lang.Object#toString() */
+  @Override
+  public String toString() {
+    return new StringBuilder()
+      .append("GeodeDispatchable(")
+      .append("originatorId=").append(originatorId)
+      .append(", writtenAt=").append(writtenAt)
+      .append(", id=").append(id)
+      .append(", state=").append(state)
+      .append(")")
+      .toString();
   }
 
 }

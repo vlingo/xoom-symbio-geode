@@ -20,6 +20,7 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import io.vlingo.actors.Definition;
 import io.vlingo.actors.World;
 import io.vlingo.actors.testkit.AccessSafely;
 import io.vlingo.actors.testkit.TestWorld;
@@ -312,7 +313,15 @@ public class GeodeStateStoreActorTest {
     
     configuration = Configuration.forPeer();
     
-    store = world.actorFor(StateStore.class, GeodeStateStoreActor.class, dispatcher, configuration);
+    final String originatorId = "TEST";
+    final long checkConfirmationExpirationInterval = 1000L;
+    final long confirmationExpiration = 1000L;
+    
+    store = world.actorFor(
+      StateStore.class,
+      Definition.has(
+        GeodeStateStoreActor.class,
+        Definition.parameters(originatorId, dispatcher, configuration, checkConfirmationExpirationInterval, confirmationExpiration)));
     store.registerAdapter(Entity1.class, new Entity1StateAdapter());
     
     StateTypeStateStoreMap.stateTypeToStoreName(Entity1.class, StoreName);

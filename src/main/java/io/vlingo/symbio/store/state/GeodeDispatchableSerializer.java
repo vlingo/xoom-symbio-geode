@@ -27,10 +27,11 @@ public class GeodeDispatchableSerializer implements PdxSerializer, Declarable {
   /* @see org.apache.geode.pdx.PdxSerializer#fromData(java.lang.Class, org.apache.geode.pdx.PdxReader) */
   @Override
   public Object fromData(Class<?> clazz, PdxReader in) {
+    String originatorId = in.readString("originatorId");
     Long writtenAt = in.readLong("writtenAt");
     String id = in.readString("id");
     State<?> state = (State<?>) in.readObject("state");
-    return new GeodeDispatchable<State<?>>(writtenAt, id, state);
+    return new GeodeDispatchable<State<?>>(originatorId, writtenAt, id, state);
   }
 
   /* @see org.apache.geode.pdx.PdxSerializer#toData(java.lang.Object, org.apache.geode.pdx.PdxWriter) */
@@ -41,6 +42,7 @@ public class GeodeDispatchableSerializer implements PdxSerializer, Declarable {
     if (o instanceof GeodeDispatchable) {
       GeodeDispatchable instance = (GeodeDispatchable) o;
       out
+        .writeString("originatorId", instance.originatorId)
         .writeLong("writtenAt", instance.writtenAt)
         .writeString("id", instance.id)
         .writeObject("state", instance.state);
