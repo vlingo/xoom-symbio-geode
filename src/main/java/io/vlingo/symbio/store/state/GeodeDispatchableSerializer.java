@@ -7,6 +7,8 @@
 
 package io.vlingo.symbio.store.state;
 
+import java.time.LocalDateTime;
+
 import org.apache.geode.cache.Declarable;
 import org.apache.geode.pdx.PdxReader;
 import org.apache.geode.pdx.PdxSerializer;
@@ -28,10 +30,10 @@ public class GeodeDispatchableSerializer implements PdxSerializer, Declarable {
   @Override
   public Object fromData(Class<?> clazz, PdxReader in) {
     String originatorId = in.readString("originatorId");
-    Long writtenAt = in.readLong("writtenAt");
+    LocalDateTime createdAt = (LocalDateTime) in.readObject("createdAt");
     String id = in.readString("id");
     State<?> state = (State<?>) in.readObject("state");
-    return new GeodeDispatchable<State<?>>(originatorId, writtenAt, id, state);
+    return new GeodeDispatchable<State<?>>(originatorId, createdAt, id, state);
   }
 
   /* @see org.apache.geode.pdx.PdxSerializer#toData(java.lang.Object, org.apache.geode.pdx.PdxWriter) */
@@ -43,7 +45,7 @@ public class GeodeDispatchableSerializer implements PdxSerializer, Declarable {
       GeodeDispatchable instance = (GeodeDispatchable) o;
       out
         .writeString("originatorId", instance.originatorId)
-        .writeLong("writtenAt", instance.writtenAt)
+        .writeObject("createdAt", instance.createdAt)
         .writeString("id", instance.id)
         .writeObject("state", instance.state);
       result = true;

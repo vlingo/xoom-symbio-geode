@@ -6,6 +6,8 @@
 // one at https://mozilla.org/MPL/2.0/.
 package io.vlingo.symbio.store.state.geode;
 
+import java.time.LocalDateTime;
+
 import org.apache.geode.cache.GemFireCache;
 import org.apache.geode.cache.Region;
 
@@ -251,15 +253,11 @@ public class GeodeStateStoreActor extends Actor implements StateStore {
         }
         typeStore.put(id, raw);
       }
-      //System.out.println("wrote " + id + " to " + typeStore.getName());
-      final long writeTimestamp = System.currentTimeMillis();
-      
       final String dispatchId = storeName + ":" + id;
       
       Region<String, GeodeDispatchable<ObjectState<Object>>> dispatchablesRegion =
         cache.getRegion(GeodeQueries.DISPATCHABLES_REGION_NAME);
-      dispatchablesRegion.put(dispatchId, new GeodeDispatchable<>(originatorId, writeTimestamp, dispatchId, raw));
-      //System.out.println("wrote " + dispatchId + " to " + GeodeQueries.DISPATCHABLES_REGION_NAME);
+      dispatchablesRegion.put(dispatchId, new GeodeDispatchable<>(originatorId, LocalDateTime.now(), dispatchId, raw));
       
       dispatch(dispatchId, raw);
       
