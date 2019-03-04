@@ -267,7 +267,7 @@ public class GeodeStateStoreActorTest {
     store.write(entity3.id, entity3, 1, interest);
 
     try {
-      Thread.sleep(2000);
+      Thread.sleep(6000);
     }
     catch (InterruptedException ex) {
       //ignored
@@ -276,12 +276,10 @@ public class GeodeStateStoreActorTest {
     accessDispatcher.writeUsing("processDispatch", true);
 
     int dispatchedStateCount = accessDispatcher.readFrom("dispatchedStateCount");
-    System.out.println("GeodeStateStoreActorTest::testRedispatch - dispatchedStateCount=" + dispatchedStateCount);
     assertTrue("dispatchedStateCount", dispatchedStateCount == 3);
     
     int dispatchAttemptCount = accessDispatcher.readFrom("dispatchAttemptCount");
-    System.out.println("GeodeStateStoreActorTest::testRedispatch - dispatchAttemptCount=" + dispatchAttemptCount);
-    assertTrue("dispatchAttemptCount", dispatchAttemptCount > 1);
+    assertTrue("dispatchAttemptCount", dispatchAttemptCount > 3);
 }
   
   @BeforeClass
