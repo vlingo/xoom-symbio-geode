@@ -6,10 +6,11 @@
 // one at https://mozilla.org/MPL/2.0/.
 package io.vlingo.symbio.store.state.geode;
 
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.Set;
 
 import org.apache.geode.cache.Cache;
 import org.apache.geode.cache.Region;
@@ -35,18 +36,23 @@ import io.vlingo.symbio.store.state.StateStore.RedispatchControl;
  */
 public class GeodeRedispatchControlActor extends Actor
 implements DispatcherControl, RedispatchControl, Scheduled<Object> {
+  
+  public final static long DEFAULT_REDISPATCH_DELAY = 2000L;
 
   private final Cache cache;
   private final String originatorId;
   private final Dispatcher dispatcher;
+  private final long confirmationExpiration;
   private final Cancellable cancellable;
   private Query allUnconfirmedDispatablesQuery;
   
+  @SuppressWarnings("unchecked")
   public GeodeRedispatchControlActor(final String originatorId, final Dispatcher dispatcher, final Cache cache, final long checkConfirmationExpirationInterval, final long confirmationExpiration) {
     this.originatorId = originatorId;
     this.cache = cache;
     this.dispatcher = dispatcher;
-    this.cancellable = scheduler().schedule(selfAs(Scheduled.class), null, confirmationExpiration, checkConfirmationExpirationInterval);
+    this.confirmationExpiration = confirmationExpiration;
+    this.cancellable = scheduler().schedule(selfAs(Scheduled.class), null, DEFAULT_REDISPATCH_DELAY, checkConfirmationExpirationInterval);
   }
   
   @Override
@@ -56,24 +62,26 @@ implements DispatcherControl, RedispatchControl, Scheduled<Object> {
 
   @Override
   public void confirmDispatched(String dispatchId, ConfirmDispatchedResultInterest interest) {
-    //System.out.println("GeodeRedispatchControlActor::confirmDispatched - executing on " + Thread.currentThread().getName());
     Region<String, GeodeDispatchable<ObjectState<Object>>> region =
       cache.getRegion(GeodeQueries.DISPATCHABLES_REGION_NAME);
     region.remove(dispatchId);
-    //System.out.println("GeodeRedispatchControlActor::confirmDispatched - removed dispatchId=" + dispatchId);
     interest.confirmDispatchedResultedIn(Result.Success, dispatchId);
   }
 
   @Override
   public void dispatchUnconfirmed() {
-    //System.out.println("GeodeRedispatchControlActor::dispatchUnconfirmed - executing on " + Thread.currentThread().getName());
     try {
+      final LocalDateTime now = LocalDateTime.now();
       Collection<GeodeDispatchable<ObjectState<Object>>> dispatchables = allUnconfirmedDispatchables();
       for (GeodeDispatchable<ObjectState<Object>> dispatchable : dispatchables) {
-        //System.out.println("GeodeRedispatchControlActor::dispatchUnconfirmed - calling dispatcher.dispatch for " + dispatchable.id + " writtenAt " + dispatchable.writtenAt + " on " + Thread.currentThread().getName());
-        dispatcher.dispatch(dispatchable.id, dispatchable.state);
+        final LocalDateTime then = dispatchable.createdAt;
+        Duration duration = Duration.between(then, now);
+        if (Math.abs(duration.toMillis()) > confirmationExpiration) {
+          dispatcher.dispatch(dispatchable.id, dispatchable.state);
+        }
       }
-    } catch (Exception ex) {
+    }
+    catch (Exception ex) {
       logger().log(getClass().getSimpleName() + " dispatchUnconfirmed() failed because: " + ex.getMessage(), ex);
     }
   }
@@ -82,7 +90,6 @@ implements DispatcherControl, RedispatchControl, Scheduled<Object> {
   private Collection<GeodeDispatchable<ObjectState<Object>>> allUnconfirmedDispatchables() throws Exception {
     SelectResults<GeodeDispatchable<ObjectState<Object>>> selected =
       (SelectResults<GeodeDispatchable<ObjectState<Object>>>) allUnconfirmedDispatchablesQuery().execute(originatorId);
-    //System.out.println("GeodeRedispatchControlActor::allUnconfirmedDispatchables - selected " + selected.size() + " dispatchables");
     List<GeodeDispatchable<ObjectState<Object>>> dispatchables =
             new ArrayList<GeodeDispatchable<ObjectState<Object>>>();
     for (GeodeDispatchable<ObjectState<Object>> dispatchable : selected) {
