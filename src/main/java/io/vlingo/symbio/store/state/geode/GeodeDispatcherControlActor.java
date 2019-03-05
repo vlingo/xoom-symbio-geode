@@ -24,18 +24,18 @@ import io.vlingo.common.Scheduled;
 import io.vlingo.symbio.State.ObjectState;
 import io.vlingo.symbio.store.Result;
 import io.vlingo.symbio.store.state.StateStore.ConfirmDispatchedResultInterest;
+import io.vlingo.symbio.store.state.StateStore.Dispatchable;
 import io.vlingo.symbio.store.state.StateStore.Dispatcher;
 import io.vlingo.symbio.store.state.StateStore.DispatcherControl;
-import io.vlingo.symbio.store.state.StateStore.RedispatchControl;
 /**
- * GeodeRedispatchControlActor is responsible for requesting re-dispatch
- * of the unconfirmed dispatchables of a GeodeStateStoreActor on a
+ * GeodeDispatcherControlActor is responsible for requesting re-dispatch
+ * of the unconfirmed {@link Dispatchable} of a GeodeStateStoreActor on a
  * configurable, periodic basis. This allows the work of re-dispatching
  * to be shifted to a different thread than the one responsible for
  * reading and writing in the state store.
  */
-public class GeodeRedispatchControlActor extends Actor
-implements DispatcherControl, RedispatchControl, Scheduled<Object> {
+public class GeodeDispatcherControlActor extends Actor
+implements DispatcherControl, Scheduled<Object> {
   
   public final static long DEFAULT_REDISPATCH_DELAY = 2000L;
 
@@ -47,7 +47,7 @@ implements DispatcherControl, RedispatchControl, Scheduled<Object> {
   private Query allUnconfirmedDispatablesQuery;
   
   @SuppressWarnings("unchecked")
-  public GeodeRedispatchControlActor(final String originatorId, final Dispatcher dispatcher, final Cache cache, final long checkConfirmationExpirationInterval, final long confirmationExpiration) {
+  public GeodeDispatcherControlActor(final String originatorId, final Dispatcher dispatcher, final Cache cache, final long checkConfirmationExpirationInterval, final long confirmationExpiration) {
     this.originatorId = originatorId;
     this.cache = cache;
     this.dispatcher = dispatcher;
@@ -106,7 +106,6 @@ implements DispatcherControl, RedispatchControl, Scheduled<Object> {
     return allUnconfirmedDispatablesQuery;
   }
 
-  /* @see io.vlingo.actors.Actor#afterStop() */
   @Override
   protected void afterStop() {
     super.afterStop();

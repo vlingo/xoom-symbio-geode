@@ -13,7 +13,6 @@ import org.apache.geode.cache.Region;
 
 import io.vlingo.actors.Actor;
 import io.vlingo.actors.Definition;
-import io.vlingo.actors.Protocols;
 import io.vlingo.common.Failure;
 import io.vlingo.common.Success;
 import io.vlingo.symbio.Metadata;
@@ -32,15 +31,23 @@ import io.vlingo.symbio.store.state.StateTypeStateStoreMap;
  * objects from/to a GemFire cache.
  */
 public class GeodeStateStoreActor extends Actor implements StateStore {
-    
+  
+  public static final long CHECK_CONFIRMATION_EXPIRATION_INTERVAL_DEFAULT = 1000L;
+  public static final long CONFIRMATION_EXPIRATION_DEFAULT = 1000L;
+  
   private final String originatorId;
   private final StateStoreAdapterAssistant adapterAssistant;
   private final Dispatcher dispatcher;
+  private final DispatcherControl dispatcherControl;
   private final GemFireCache cache;
-  private final RedispatchControl redispatchControl;
 
   public GeodeStateStoreActor(final String originatorId, final Dispatcher dispatcher, final Configuration configuration) {
-    this(originatorId, dispatcher, configuration, 1000L, 1000L);
+    this(
+      originatorId,
+      dispatcher,
+      configuration,
+      CHECK_CONFIRMATION_EXPIRATION_INTERVAL_DEFAULT,
+      CONFIRMATION_EXPIRATION_DEFAULT);
   }
   
   public GeodeStateStoreActor(final String originatorId, final Dispatcher dispatcher, final Configuration configuration, long checkConfirmationExpirationInterval, final long confirmationExpiration) {
@@ -61,24 +68,21 @@ public class GeodeStateStoreActor extends Actor implements StateStore {
     
     StatePdxSerializerRegistry.serializeTypeWith(GeodeDispatchable.class, GeodeDispatchableSerializer.class);
 
-    Protocols protocols = stage().actorFor(
-      new Class[] { DispatcherControl.class, RedispatchControl.class },
-      Definition.has(GeodeRedispatchControlActor.class, Definition.parameters(originatorId, dispatcher, cache, checkConfirmationExpirationInterval, confirmationExpiration))
+    dispatcherControl = stage().actorFor(
+      DispatcherControl.class,
+      Definition.has(GeodeDispatcherControlActor.class, Definition.parameters(originatorId, dispatcher, cache, checkConfirmationExpirationInterval, confirmationExpiration))
     );
-    final DispatcherControl control = protocols.get(0);
-    redispatchControl = protocols.get(1);
 
-    dispatcher.controlWith(control);
-    control.dispatchUnconfirmed();
+    dispatcher.controlWith(dispatcherControl);
+    dispatcherControl.dispatchUnconfirmed();
   }
-
-
-  /* @see io.vlingo.actors.Actor#afterStop() */
+  
   @Override
-  protected void afterStop() {
-    if (redispatchControl != null) {
-      redispatchControl.stop();
+  public void stop() {
+    if (dispatcherControl != null) {
+      dispatcherControl.stop();
     }
+    super.stop();
   }
 
   protected void dispatch(final String dispatchId, final ObjectState<Object> state) {
