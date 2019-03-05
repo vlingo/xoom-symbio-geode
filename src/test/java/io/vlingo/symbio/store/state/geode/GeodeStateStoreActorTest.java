@@ -28,12 +28,14 @@ import io.vlingo.symbio.Metadata;
 import io.vlingo.symbio.State;
 import io.vlingo.symbio.State.ObjectState;
 import io.vlingo.symbio.store.Result;
+import io.vlingo.symbio.store.common.geode.Configuration;
+import io.vlingo.symbio.store.common.geode.GemFireCacheProvider;
+import io.vlingo.symbio.store.common.geode.StatePdxSerializerRegistry;
 import io.vlingo.symbio.store.state.Entity1;
 import io.vlingo.symbio.store.state.Entity1.Entity1StateAdapter;
 import io.vlingo.symbio.store.state.MetadataPdxSerializer;
 import io.vlingo.symbio.store.state.MockObjectDispatcher;
 import io.vlingo.symbio.store.state.MockObjectResultInterest;
-import io.vlingo.symbio.store.state.StatePdxSerializerRegistry;
 import io.vlingo.symbio.store.state.StateStore;
 import io.vlingo.symbio.store.state.StateTypeStateStoreMap;
 /**
@@ -309,7 +311,7 @@ public class GeodeStateStoreActorTest {
     interest = new MockObjectResultInterest();
     dispatcher = new MockObjectDispatcher(interest);
     
-    configuration = Configuration.forPeer();
+    configuration = Configuration.define().forPeer();
     
     final String originatorId = "TEST";
     final long checkConfirmationExpirationInterval = 1000L;

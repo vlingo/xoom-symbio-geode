@@ -4,7 +4,7 @@
 // Mozilla Public License, v. 2.0. If a copy of the MPL
 // was not distributed with this file, You can obtain
 // one at https://mozilla.org/MPL/2.0/.
-package io.vlingo.symbio.store.state.geode;
+package io.vlingo.symbio.store.common.geode;
 
 import org.apache.geode.cache.CacheClosedException;
 import org.apache.geode.cache.CacheFactory;
@@ -18,7 +18,7 @@ import org.apache.geode.cache.client.ClientCacheFactory;
 public class GemFireCacheProvider {
 
   public static GemFireCache getAnyInstance(final Configuration config) throws CouldNotAccessCacheException {
-    return config.role.isPeer() ? serverCache() : clientCache();
+    return config.isPeer() ? serverCache() : clientCache();
   }
 
   protected static GemFireCache clientCache() throws CouldNotAccessCacheException {

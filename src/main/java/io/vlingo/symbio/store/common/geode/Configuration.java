@@ -4,25 +4,45 @@
 // Mozilla Public License, v. 2.0. If a copy of the MPL
 // was not distributed with this file, You can obtain
 // one at https://mozilla.org/MPL/2.0/.
-package io.vlingo.symbio.store.state.geode;
+package io.vlingo.symbio.store.common.geode;
+
 /**
  * Configuration is responsible for maintaining the configuration
- * for a {@link GeodeStateStoreActor}.
+ * for a Geode object or state store.
  */
 public class Configuration {
   
-  public final Role role;
+  private Role role;
   
-  public static Configuration forPeer() {
-    return new Configuration(Role.Peer);
+  private Configuration() {
+    super();
+    this.role = Role.Peer;
   }
   
-  public static Configuration forClient() {
-    return new Configuration(Role.Client);
+  public static Configuration define() {
+    return new Configuration();
   }
   
-  public Configuration(final Role role) {
-    this.role = role;
+  public Configuration forPeer() {
+    this.role = Role.Peer;
+    return this;
+  }
+  
+  public Configuration forClient() {
+    this.role = Role.Client;
+    return this;
+  }
+    
+  public Role role() {
+    return role;
+  }
+  
+  public boolean isPeer() {
+    return role == Role.Peer;
+  }
+
+  public boolean isClient() {
+    return role == Role.Client;
   }
   
   public static enum Role {
