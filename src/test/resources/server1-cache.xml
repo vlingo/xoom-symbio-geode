@@ -12,4 +12,6 @@
 	</region>
 	<region name="Entity1" refid="PARTITION_REDUNDANT">
 	</region>
+	<region name="Person" refid="PARTITION_REDUNDANT">
+	</region>
 </cache>
