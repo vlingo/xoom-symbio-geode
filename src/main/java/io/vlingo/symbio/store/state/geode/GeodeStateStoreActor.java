@@ -7,6 +7,7 @@
 package io.vlingo.symbio.store.state.geode;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 import org.apache.geode.cache.GemFireCache;
 import org.apache.geode.cache.Region;
@@ -16,6 +17,7 @@ import io.vlingo.actors.Definition;
 import io.vlingo.common.Failure;
 import io.vlingo.common.Success;
 import io.vlingo.symbio.Metadata;
+import io.vlingo.symbio.Source;
 import io.vlingo.symbio.State;
 import io.vlingo.symbio.State.ObjectState;
 import io.vlingo.symbio.StateAdapter;
@@ -91,22 +93,9 @@ public class GeodeStateStoreActor extends Actor implements StateStore {
     dispatcher.dispatch(dispatchId, state);
   }
 
-  /*
-   * @see io.vlingo.symbio.store.state.StateStore#read(java.lang.String, java.lang.Class, io.vlingo.symbio.store.state.StateStore.ReadResultInterest)
-   */
-  public void read(String id, Class<?> type, ReadResultInterest interest) {
-    readFor(id, type, interest, null);
-  }
-
-  /*
-   * @see io.vlingo.symbio.store.state.StateStore#read(java.lang.String, java.lang.Class, io.vlingo.symbio.store.state.StateStore.ReadResultInterest, java.lang.Object)
-   */
+  /* @see io.vlingo.symbio.store.state.StateStore#read(java.lang.String, java.lang.Class, io.vlingo.symbio.store.state.StateStore.ReadResultInterest, java.lang.Object) */
   @Override
-  public void read(String id, Class<?> type, ReadResultInterest interest, Object object) {
-    readFor(id, type, interest, object);
-  }
-
-  protected void readFor(final String id, final Class<?> type, final ReadResultInterest interest, final Object object) {
+  public void read(final String id, final Class<?> type, final ReadResultInterest interest, final Object object) {
     
     if (interest != null) {
       
@@ -165,41 +154,8 @@ public class GeodeStateStoreActor extends Actor implements StateStore {
     }
   }
 
-  /*
-   * @see io.vlingo.symbio.store.state.StateStore#write(java.lang.String, java.lang.Object, int, io.vlingo.symbio.store.state.StateStore.WriteResultInterest)
-   */
   @Override
-  public <S> void write(final String id, final S state, final int stateVersion, final WriteResultInterest interest) {
-    writeWith(id, state, stateVersion, null, interest, null);
-  }
-
-  /*
-   * @see io.vlingo.symbio.store.state.StateStore#write(java.lang.String, java.lang.Object, int, io.vlingo.symbio.Metadata, io.vlingo.symbio.store.state.StateStore.WriteResultInterest)
-   */
-  @Override
-  public <S> void write(final String id, final S state, final int stateVersion, final Metadata metadata, final WriteResultInterest interest) {
-    writeWith(id, state, stateVersion, metadata, interest, null);
-  }
-
-  /*
-   * @see io.vlingo.symbio.store.state.StateStore#write(java.lang.String, java.lang.Object, int, io.vlingo.symbio.store.state.StateStore.WriteResultInterest, java.lang.Object)
-   */
-  @Override
-  public <S> void write(final String id, final S state, final int stateVersion, final WriteResultInterest interest, final Object object) {
-    writeWith(id, state, stateVersion, null, interest, object);
-  }
-
-  @Override
-  public <S> void write(final String id, final S state, final int stateVersion, final Metadata metadata, final WriteResultInterest interest, final Object object) {
-    writeWith(id, state, stateVersion, metadata, interest, object);
-  }
-
-  @Override
-  public <S, R extends State<?>> void registerAdapter(final Class<S> stateType, final StateAdapter<S, R> adapter) {
-    adapterAssistant.registerAdapter(stateType, adapter);
-  }
-
-  protected <S> void writeWith(final String id, final S state, final int stateVersion, final Metadata metadata, final WriteResultInterest interest, final Object object) {
+  public <S> void write(final String id, final S state, final int stateVersion, final List<Source<?>> sources, final Metadata metadata, final WriteResultInterest interest, final Object object) {
         
     if (interest == null) {
       logger().log(
@@ -273,5 +229,9 @@ public class GeodeStateStoreActor extends Actor implements StateStore {
       logger().log(getClass().getSimpleName() + " writeWith() error because: " + e.getMessage(), e);
       interest.writeResultedIn(Failure.of(new StorageException(Result.Error, e.getMessage(), e)), id, state, stateVersion, object);
     }
+  }
+
+  public <S, R extends State<?>> void registerAdapter(final Class<S> stateType, final StateAdapter<S, R> adapter) {
+    adapterAssistant.registerAdapter(stateType, adapter);
   }
 }

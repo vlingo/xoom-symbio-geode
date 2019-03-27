@@ -7,6 +7,7 @@
 
 package io.vlingo.symbio.store.state;
 
+import io.vlingo.common.serialization.JsonSerialization;
 import io.vlingo.symbio.Metadata;
 import io.vlingo.symbio.State.ObjectState;
 import io.vlingo.symbio.StateAdapter;
@@ -79,6 +80,11 @@ public class Entity1 {
     @Override
     public ObjectState<Object> toRawState(final Entity1 state, final int stateVersion, final Metadata metadata) {
       return new ObjectState<Object>(state.id, Entity1.class, typeVersion(), state, stateVersion, metadata);
+    }
+
+    @Override
+    public <ST> ST fromRawState(ObjectState<Object> raw, Class<ST> stateType) {
+      return (ST) raw.data;
     }
   }
 }
