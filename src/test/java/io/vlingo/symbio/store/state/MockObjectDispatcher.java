@@ -6,12 +6,14 @@
 // one at https://mozilla.org/MPL/2.0/.
 package io.vlingo.symbio.store.state;
 
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import io.vlingo.actors.testkit.AccessSafely;
+import io.vlingo.symbio.Source;
 import io.vlingo.symbio.State;
 import io.vlingo.symbio.store.state.StateStore.ConfirmDispatchedResultInterest;
 import io.vlingo.symbio.store.state.StateStore.Dispatcher;
@@ -19,7 +21,7 @@ import io.vlingo.symbio.store.state.StateStore.DispatcherControl;
 
 public class MockObjectDispatcher implements Dispatcher {
   private AccessSafely access;
-  
+
   public final ConfirmDispatchedResultInterest confirmDispatchedResultInterest;
   public DispatcherControl control;
   public final Map<String,Object> dispatched = new HashMap<>();
@@ -37,7 +39,7 @@ public class MockObjectDispatcher implements Dispatcher {
   }
 
   @Override
-  public <S extends State<?>> void dispatch(final String dispatchId, final S state) {
+  public <S extends State<?>, C extends Source<?>> void dispatch(final String dispatchId, final S state, final Collection<C> sources) {
     dispatchAttemptCount.getAndIncrement();
     if (processDispatch.get()) {
       access.writeUsing("dispatchedState", dispatchId, (State<?>) state);
@@ -48,14 +50,14 @@ public class MockObjectDispatcher implements Dispatcher {
   public AccessSafely afterCompleting(final int times) {
     access = AccessSafely
       .afterCompleting(times)
-      
+
       .writingWith("dispatchedState", (String id, Object state) -> dispatched.put(id, state))
       .readingWith("dispatchedState", (String id) -> dispatched.get(id))
       .readingWith("dispatchedStateCount", () -> dispatched.size())
 
       .writingWith("processDispatch", (Boolean flag) -> processDispatch.set(flag))
       .readingWith("processDispatch", () -> processDispatch.get())
-      
+
       .readingWith("dispatchAttemptCount", () -> dispatchAttemptCount.get())
 
       .readingWith("dispatched", () -> dispatched);

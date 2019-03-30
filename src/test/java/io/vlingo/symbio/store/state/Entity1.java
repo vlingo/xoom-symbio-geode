@@ -79,12 +79,12 @@ public class Entity1 {
 
     @Override
     public ObjectState<Object> toRawState(final Entity1 state, final int stateVersion) {
-      return toRawState(state, stateVersion, Metadata.with("value", "op"));
+      return toRawState(state, stateVersion, Metadata.with("", ""));
     }
 
     @Override
-    public ObjectState<Object> toRawState(final Entity1 state, final int stateVersion, final Metadata metadata) {
-      return new ObjectState<Object>(state.id, Entity1.class, typeVersion(), state, stateVersion, metadata);
+    public ObjectState<Object> toRawState(final String id, final Entity1 state, final int stateVersion, final Metadata metadata) {
+      return new ObjectState<Object>(id, Entity1.class, typeVersion(), state, stateVersion, metadata);
     }
   }
 }

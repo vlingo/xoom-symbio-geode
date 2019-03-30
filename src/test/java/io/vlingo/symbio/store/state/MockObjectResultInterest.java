@@ -7,6 +7,7 @@
 
 package io.vlingo.symbio.store.state;
 
+import java.util.List;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -14,6 +15,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import io.vlingo.actors.testkit.AccessSafely;
 import io.vlingo.common.Outcome;
 import io.vlingo.symbio.Metadata;
+import io.vlingo.symbio.Source;
 import io.vlingo.symbio.store.Result;
 import io.vlingo.symbio.store.StorageException;
 import io.vlingo.symbio.store.state.StateStore.ConfirmDispatchedResultInterest;
@@ -24,9 +26,9 @@ public class MockObjectResultInterest
     implements ReadResultInterest,
                WriteResultInterest,
                ConfirmDispatchedResultInterest {
-  
+
   private AccessSafely access;
-  
+
   public AtomicInteger confirmDispatchedResultedIn = new AtomicInteger(0);
   public AtomicInteger readObjectResultedIn = new AtomicInteger(0);
   public AtomicInteger writeObjectResultedIn = new AtomicInteger(0);
@@ -49,7 +51,7 @@ public class MockObjectResultInterest
   @Override
   public <S> void readResultedIn(final Outcome<StorageException, Result> outcome, final String id, final S state, final int stateVersion, final Metadata metadata, final Object object) {
     outcome
-      .andThen(result -> { 
+      .andThen(result -> {
         access.writeUsing("readStoreData", new StoreData(1, result, state, metadata, null));
         return result;
       })
@@ -60,7 +62,7 @@ public class MockObjectResultInterest
   }
 
   @Override
-  public <S> void writeResultedIn(final Outcome<StorageException, Result> outcome, final String id, final S state, final int stateVersion, final Object object) {
+  public <S,C> void writeResultedIn(final Outcome<StorageException, Result> outcome, final String id, final S state, final int stateVersion, final List<Source<C>> sources, final Object object) {
     outcome
       .andThen(result -> {
         access.writeUsing("writeStoreData", new StoreData(1, result, state, null, null));
@@ -76,7 +78,7 @@ public class MockObjectResultInterest
   public AccessSafely afterCompleting(final int times) {
     access = AccessSafely
       .afterCompleting(times)
-      
+
       .writingWith("confirmDispatchedResultedIn", (Integer increment) -> confirmDispatchedResultedIn.addAndGet(increment))
       .readingWith("confirmDispatchedResultedIn", () -> confirmDispatchedResultedIn.get())
 

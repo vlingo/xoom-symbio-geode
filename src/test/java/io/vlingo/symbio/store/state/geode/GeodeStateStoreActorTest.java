@@ -24,9 +24,11 @@ import io.vlingo.actors.Definition;
 import io.vlingo.actors.World;
 import io.vlingo.actors.testkit.AccessSafely;
 import io.vlingo.actors.testkit.TestWorld;
+import io.vlingo.symbio.EntryAdapterProvider;
 import io.vlingo.symbio.Metadata;
 import io.vlingo.symbio.State;
 import io.vlingo.symbio.State.ObjectState;
+import io.vlingo.symbio.StateAdapterProvider;
 import io.vlingo.symbio.store.Result;
 import io.vlingo.symbio.store.common.geode.Configuration;
 import io.vlingo.symbio.store.common.geode.GemFireCacheProvider;
@@ -43,16 +45,18 @@ import io.vlingo.symbio.store.state.StateTypeStateStoreMap;
  */
 public class GeodeStateStoreActorTest {
   private final static String StoreName = Entity1.class.getSimpleName();
-  
+
   private static ServerLauncher serverLauncher;
   private static Configuration configuration;
-  
+
   private MockObjectDispatcher dispatcher;
   private MockObjectResultInterest interest;
   private StateStore store;
   private TestWorld testWorld;
   private World world;
-  
+  //private EntryAdapterProvider entryAdapterProvider;
+  private StateAdapterProvider stateAdapterProvider;
+
   @Test
   public void testThatStateStoreWritesText() {
     final AccessSafely access1 = interest.afterCompleting(1);
@@ -70,7 +74,7 @@ public class GeodeStateStoreActorTest {
 
   @Test
   public void testThatStateStoreWritesAndReadsObject() {
-    
+
     final AccessSafely access1 = interest.afterCompleting(2);
     dispatcher.afterCompleting(2);
 
@@ -97,7 +101,7 @@ public class GeodeStateStoreActorTest {
 
     final Entity1 entity = new Entity1("123", 5);
 
-    store.write(entity.id, entity, 1, interest);
+    store.write(entity.id, entity, 1, Metadata.with("value", "op"), interest);
     store.read(entity.id, Entity1.class, interest);
 
     assertEquals(1, (int) access1.readFrom("readObjectResultedIn"));
@@ -122,7 +126,7 @@ public class GeodeStateStoreActorTest {
 
     final Entity1 entity = new Entity1("123", 5);
 
-    store.write(entity.id, entity, 1, interest);
+    store.write(entity.id, entity, 1, Metadata.with("value", "op"), interest);
     store.read(entity.id, Entity1.class, interest);
 
     assertEquals(1, (int) access1.readFrom("readObjectResultedIn"));
@@ -253,14 +257,14 @@ public class GeodeStateStoreActorTest {
     final Object objectState = access1.readFrom("objectState");
     assertNull(objectState);
   }
-  
+
   @Test
   public void testRedispatch() {
     interest.afterCompleting(1);
     final AccessSafely accessDispatcher = dispatcher.afterCompleting(5);
 
     accessDispatcher.writeUsing("processDispatch", false);
-    
+
     final Entity1 entity1 = new Entity1("123", 1);
     store.write(entity1.id, entity1, 1, interest);
     final Entity1 entity2 = new Entity1("234", 2);
@@ -274,21 +278,21 @@ public class GeodeStateStoreActorTest {
     catch (InterruptedException ex) {
       //ignored
     }
-    
+
     accessDispatcher.writeUsing("processDispatch", true);
 
     int dispatchedStateCount = accessDispatcher.readFrom("dispatchedStateCount");
     assertTrue("dispatchedStateCount", dispatchedStateCount == 3);
-    
+
     int dispatchAttemptCount = accessDispatcher.readFrom("dispatchAttemptCount");
     assertTrue("dispatchAttemptCount", dispatchAttemptCount > 3);
 }
-  
+
   @BeforeClass
   public static void beforeAllTests() {
     startGeode();
   }
-  
+
   protected static void startGeode() {
     System.out.println("startGeode - entered");
     try {
@@ -302,36 +306,39 @@ public class GeodeStateStoreActorTest {
       System.out.println("startGeode - exited");
     }
   }
-  
+
   @Before
   public void beforeEachTest() {
     testWorld = TestWorld.startWithDefaults("test-store");
     world = testWorld.world();
-    
+
     interest = new MockObjectResultInterest();
     dispatcher = new MockObjectDispatcher(interest);
-    
+
     configuration = Configuration.define().forPeer();
-    
+
     final String originatorId = "TEST";
     final long checkConfirmationExpirationInterval = 1000L;
     final long confirmationExpiration = 1000L;
-    
+
+    stateAdapterProvider = new StateAdapterProvider(world);
+    stateAdapterProvider.registerAdapter(Entity1.class, new Entity1StateAdapter());
+    new EntryAdapterProvider(world); //entryAdapterProvider =
+
     store = world.actorFor(
       StateStore.class,
       Definition.has(
         GeodeStateStoreActor.class,
         Definition.parameters(originatorId, dispatcher, configuration, checkConfirmationExpirationInterval, confirmationExpiration)));
-    store.registerAdapter(Entity1.class, new Entity1StateAdapter());
-    
+
     StateTypeStateStoreMap.stateTypeToStoreName(Entity1.class, StoreName);
   }
-  
+
   @AfterClass
   public static void afterAllTests() {
     stopGeode();
   }
-  
+
   public static void stopGeode() {
     System.out.println("stopGeode - entered");
     try {
@@ -343,19 +350,19 @@ public class GeodeStateStoreActorTest {
       System.out.println("stopGeode - exited");
     }
   }
-  
+
   @After
   public void afterEachTest() {
     destroyWorld();
     clearCache();
   }
-  
+
   protected void destroyWorld() {
     world.terminate();
     world = null;
     store = null;
   }
-  
+
   @SuppressWarnings("rawtypes")
   private void clearCache() {
     GemFireCache cache = GemFireCacheProvider.getAnyInstance(configuration);
@@ -372,7 +379,7 @@ public class GeodeStateStoreActorTest {
       }
     }
   }
-  
+
   private String dispatchId(final String entityId) {
     return StoreName + ":" + entityId;
   }

@@ -16,11 +16,12 @@ import io.vlingo.actors.Actor;
 import io.vlingo.actors.Definition;
 import io.vlingo.common.Failure;
 import io.vlingo.common.Success;
+import io.vlingo.symbio.EntryAdapterProvider;
 import io.vlingo.symbio.Metadata;
 import io.vlingo.symbio.Source;
 import io.vlingo.symbio.State;
 import io.vlingo.symbio.State.ObjectState;
-import io.vlingo.symbio.StateAdapter;
+import io.vlingo.symbio.StateAdapterProvider;
 import io.vlingo.symbio.store.Result;
 import io.vlingo.symbio.store.StorageException;
 import io.vlingo.symbio.store.common.geode.Configuration;
@@ -28,7 +29,6 @@ import io.vlingo.symbio.store.common.geode.GemFireCacheProvider;
 import io.vlingo.symbio.store.common.geode.StatePdxSerializerRegistry;
 import io.vlingo.symbio.store.state.GeodeDispatchableSerializer;
 import io.vlingo.symbio.store.state.StateStore;
-import io.vlingo.symbio.store.state.StateStoreAdapterAssistant;
 import io.vlingo.symbio.store.state.StateTypeStateStoreMap;
 /**
  * GeodeStateStoreActor is responsible for reading and writing
@@ -40,10 +40,11 @@ public class GeodeStateStoreActor extends Actor implements StateStore {
   public static final long CONFIRMATION_EXPIRATION_DEFAULT = 1000L;
 
   private final String originatorId;
-  private final StateStoreAdapterAssistant adapterAssistant;
   private final Dispatcher dispatcher;
   private final DispatcherControl dispatcherControl;
   private final GemFireCache cache;
+  private final EntryAdapterProvider entryAdapterProvider;
+  private final StateAdapterProvider stateAdapterProvider;
 
   public GeodeStateStoreActor(final String originatorId, final Dispatcher dispatcher, final Configuration configuration) {
     this(
@@ -68,7 +69,8 @@ public class GeodeStateStoreActor extends Actor implements StateStore {
       throw new IllegalArgumentException("configuration must not be null.");
     this.cache = GemFireCacheProvider.getAnyInstance(configuration);
 
-    this.adapterAssistant = new StateStoreAdapterAssistant();
+    this.entryAdapterProvider = EntryAdapterProvider.instance(stage().world());
+    this.stateAdapterProvider = StateAdapterProvider.instance(stage().world());
 
     StatePdxSerializerRegistry.serializeTypeWith(GeodeDispatchable.class, GeodeDispatchableSerializer.class);
 
@@ -142,7 +144,7 @@ public class GeodeStateStoreActor extends Actor implements StateStore {
 
       final ObjectState<Object> raw = typeStore.get(id);
       if (raw != null) {
-        final Object state = adapterAssistant.adaptFromRawState(raw);
+        final Object state = stateAdapterProvider.fromRaw(raw);
         interest.readResultedIn(Success.of(Result.Success), id, state, raw.dataVersion, raw.metadata, object);
       }
       else {
@@ -161,16 +163,11 @@ public class GeodeStateStoreActor extends Actor implements StateStore {
   }
 
   @Override
-  public <S> void write(final String id, final S state, final int stateVersion, final List<Source<?>> sources, final Metadata metadata, final WriteResultInterest interest, final Object object) {
+  public <S,C> void write(final String id, final S state, final int stateVersion, final List<Source<C>> sources, final Metadata metadata, final WriteResultInterest interest, final Object object) {
     writeWith(id, state, stateVersion, sources, metadata, interest, object);
   }
 
-  @Override
-  public <S, R extends State<?>> void registerAdapter(final Class<S> stateType, final StateAdapter<S, R> adapter) {
-    adapterAssistant.registerAdapter(stateType, adapter);
-  }
-
-  private <S> void writeWith(final String id, final S state, final int stateVersion, final List<Source<?>> sources, final Metadata metadata, final WriteResultInterest interest, final Object object) {
+  private <S,C> void writeWith(final String id, final S state, final int stateVersion, final List<Source<C>> sources, final Metadata metadata, final WriteResultInterest interest, final Object object) {
 
     if (interest == null) {
       logger().log(
@@ -186,6 +183,7 @@ public class GeodeStateStoreActor extends Actor implements StateStore {
         id,
         state,
         stateVersion,
+        sources,
         object);
       return;
     }
@@ -197,6 +195,7 @@ public class GeodeStateStoreActor extends Actor implements StateStore {
         id,
         state,
         stateVersion,
+        sources,
         object);
       return;
     }
@@ -208,15 +207,17 @@ public class GeodeStateStoreActor extends Actor implements StateStore {
           id,
           state,
           stateVersion,
+          sources,
           object);
       return;
     }
 
     final ObjectState<Object> raw = (metadata == null)
-      ? adapterAssistant.adaptToRawState(state, stateVersion)
-      : adapterAssistant.adaptToRawState(state, stateVersion, metadata);
+      ? stateAdapterProvider.asRaw(id, state, stateVersion)
+      : stateAdapterProvider.asRaw(id, state, stateVersion, metadata);
 
     // TODO: Write sources
+    entryAdapterProvider.asEntries(sources); // final List<Entry<?>> entries =
 
     try {
       final State<Object> persistedState = typeStore.putIfAbsent(id, raw);
@@ -227,6 +228,7 @@ public class GeodeStateStoreActor extends Actor implements StateStore {
             id,
             state,
             stateVersion,
+            sources,
             object);
           return;
         }
@@ -240,11 +242,11 @@ public class GeodeStateStoreActor extends Actor implements StateStore {
 
       dispatch(dispatchId, raw);
 
-      interest.writeResultedIn(Success.of(Result.Success), id, state, stateVersion, object);
+      interest.writeResultedIn(Success.of(Result.Success), id, state, stateVersion, sources, object);
     }
     catch (Exception e) {
       logger().log(getClass().getSimpleName() + " writeWith() error because: " + e.getMessage(), e);
-      interest.writeResultedIn(Failure.of(new StorageException(Result.Error, e.getMessage(), e)), id, state, stateVersion, object);
+      interest.writeResultedIn(Failure.of(new StorageException(Result.Error, e.getMessage(), e)), id, state, stateVersion, sources, object);
     }
   }
 }
