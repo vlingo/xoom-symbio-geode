@@ -22,6 +22,7 @@ import io.vlingo.actors.Actor;
 import io.vlingo.common.Failure;
 import io.vlingo.common.Outcome;
 import io.vlingo.common.Success;
+import io.vlingo.symbio.Source;
 import io.vlingo.symbio.store.Result;
 import io.vlingo.symbio.store.StorageException;
 import io.vlingo.symbio.store.common.geode.Configuration;
@@ -53,9 +54,9 @@ public class GeodeObjectStoreActor extends Actor implements ObjectStore {
     }
   }
   
-  /* @see io.vlingo.symbio.store.object.ObjectStore#persist(java.lang.Object, long, io.vlingo.symbio.store.object.ObjectStore.PersistResultInterest, java.lang.Object) */
   @Override
-  public void persist(final Object objectToPersist, final long updateId, final PersistResultInterest interest, final Object object) {
+  public <E> void persist(final Object objectToPersist, final List<Source<E>> sources, final long updateId, final PersistResultInterest interest, final Object object) {
+    
     final PersistentObjectMapper mapper = mappers.get(objectToPersist.getClass());
     GeodePersistentObjectMapping mapping = mapper.persistMapper();
     
@@ -77,6 +78,9 @@ public class GeodeObjectStoreActor extends Actor implements ObjectStore {
       }
       mutatedObject.incrementVersion();
       region.put(mutatedObject.persistenceId(), mutatedObject);
+      
+      //TODO: persist sources
+      
       interest.persistResultedIn(Success.of(Result.Success), objectToPersist, 1, 1, object);
     }
     catch (Exception ex) {
@@ -84,9 +88,8 @@ public class GeodeObjectStoreActor extends Actor implements ObjectStore {
     }
   }
 
-  /* @see io.vlingo.symbio.store.object.ObjectStore#persistAll(java.util.Collection, long, io.vlingo.symbio.store.object.ObjectStore.PersistResultInterest, java.lang.Object) */
   @Override
-  public void persistAll(final Collection<Object> objectsToPersist, final long updateId, final PersistResultInterest interest, final Object object) {
+  public <E> void persistAll(final Collection<Object> objectsToPersist, final List<Source<E>> sources, final long updateId, final PersistResultInterest interest, final Object object) {
     
     try {
       String regionName = null;
@@ -150,6 +153,8 @@ public class GeodeObjectStoreActor extends Actor implements ObjectStore {
       newEntries.forEach((k,v) -> v.incrementVersion());
       region.putAll(newEntries);
       
+      //TODO: persist sources
+      
       interest.persistResultedIn(Success.of(Result.Success), objectsToPersist, objectsToPersist.size(), objectsToPersist.size(), object);
     }
     catch (Exception ex) {
@@ -159,7 +164,7 @@ public class GeodeObjectStoreActor extends Actor implements ObjectStore {
   
   /* @see io.vlingo.symbio.store.object.ObjectStore#queryAll(io.vlingo.symbio.store.object.QueryExpression, io.vlingo.symbio.store.object.ObjectStore.QueryResultInterest, java.lang.Object) */
   @Override
-  public void queryAll(QueryExpression expression, QueryResultInterest interest, Object object) {
+  public void queryAll(final QueryExpression expression, final QueryResultInterest interest, final Object object) {
     
     if (expression.isMapQueryExpression()) {
       throw new UnsupportedOperationException("MapQueryExpression is not supported by this object store");
@@ -190,7 +195,7 @@ public class GeodeObjectStoreActor extends Actor implements ObjectStore {
 
   /* @see io.vlingo.symbio.store.object.ObjectStore#queryObject(io.vlingo.symbio.store.object.QueryExpression, io.vlingo.symbio.store.object.ObjectStore.QueryResultInterest, java.lang.Object) */
   @Override
-  public void queryObject(QueryExpression expression, QueryResultInterest interest, Object object) {
+  public void queryObject(final QueryExpression expression, final QueryResultInterest interest, final Object object) {
     
     if (expression.isMapQueryExpression()) {
       throw new UnsupportedOperationException("MapQueryExpression is not supported by this object store");
@@ -222,11 +227,11 @@ public class GeodeObjectStoreActor extends Actor implements ObjectStore {
 
   /* @see io.vlingo.symbio.store.object.ObjectStore#registerMapper(io.vlingo.symbio.store.object.PersistentObjectMapper) */
   @Override
-  public void registerMapper(PersistentObjectMapper mapper) {
+  public void registerMapper(final PersistentObjectMapper mapper) {
     mappers.put(mapper.type(), mapper);
   }
 
-  protected Outcome<StorageException, Result> persistEach(Object objectToPersist) {
+  protected Outcome<StorageException, Result> persistEach(final Object objectToPersist) {
     final PersistentObjectMapper mapper = mappers.get(objectToPersist.getClass());
     GeodePersistentObjectMapping mapping = mapper.persistMapper();
 
