@@ -7,21 +7,26 @@
 package io.vlingo.symbio.store.state.geode;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.geode.cache.GemFireCache;
 import org.apache.geode.cache.Region;
 
 import io.vlingo.actors.Actor;
 import io.vlingo.actors.Definition;
+import io.vlingo.common.Completes;
 import io.vlingo.common.Failure;
 import io.vlingo.common.Success;
+import io.vlingo.symbio.Entry;
 import io.vlingo.symbio.EntryAdapterProvider;
 import io.vlingo.symbio.Metadata;
 import io.vlingo.symbio.Source;
 import io.vlingo.symbio.State;
 import io.vlingo.symbio.State.ObjectState;
 import io.vlingo.symbio.StateAdapterProvider;
+import io.vlingo.symbio.store.EntryReader;
 import io.vlingo.symbio.store.Result;
 import io.vlingo.symbio.store.StorageException;
 import io.vlingo.symbio.store.common.geode.Configuration;
@@ -29,6 +34,7 @@ import io.vlingo.symbio.store.common.geode.GemFireCacheProvider;
 import io.vlingo.symbio.store.common.geode.StatePdxSerializerRegistry;
 import io.vlingo.symbio.store.state.GeodeDispatchableSerializer;
 import io.vlingo.symbio.store.state.StateStore;
+import io.vlingo.symbio.store.state.StateStoreEntryReader;
 import io.vlingo.symbio.store.state.StateTypeStateStoreMap;
 /**
  * GeodeStateStoreActor is responsible for reading and writing
@@ -43,6 +49,8 @@ public class GeodeStateStoreActor extends Actor implements StateStore {
   private final Dispatcher dispatcher;
   private final DispatcherControl dispatcherControl;
   private final GemFireCache cache;
+  private final Configuration configuration;
+  private final Map<String,StateStoreEntryReader<?>> entryReaders;
   private final EntryAdapterProvider entryAdapterProvider;
   private final StateAdapterProvider stateAdapterProvider;
 
@@ -69,6 +77,10 @@ public class GeodeStateStoreActor extends Actor implements StateStore {
       throw new IllegalArgumentException("configuration must not be null.");
     this.cache = GemFireCacheProvider.getAnyInstance(configuration);
 
+    this.configuration = configuration;
+
+    this.entryReaders = new HashMap<>();
+
     this.entryAdapterProvider = EntryAdapterProvider.instance(stage().world());
     this.stateAdapterProvider = StateAdapterProvider.instance(stage().world());
 
@@ -93,6 +105,22 @@ public class GeodeStateStoreActor extends Actor implements StateStore {
 
   protected void dispatch(final String dispatchId, final ObjectState<Object> state) {
     dispatcher.dispatch(dispatchId, state);
+  }
+
+  /*
+   * @see io.vlingo.symbio.store.state.StateStore#entryReader(java.lang.String)
+   */
+  @Override
+  @SuppressWarnings("unchecked")
+  public <ET extends Entry<?>> Completes<StateStoreEntryReader<ET>> entryReader(final String name) {
+    StateStoreEntryReader<?> reader = entryReaders.get(name);
+    if (reader == null) {
+      final EntryReader.Advice advice =
+              new EntryReader.Advice(configuration, GeodeStateStoreEntryReaderActor.class,  null, null);
+      reader = childActorFor(StateStoreEntryReader.class, Definition.has(advice.entryReaderClass, Definition.parameters(advice, name)));
+      entryReaders.put(name, reader);
+    }
+    return completes().with((StateStoreEntryReader<ET>) reader);
   }
 
   /*
