@@ -5,7 +5,7 @@
 	version="1.0">
 	<pdx>
 		<pdx-serializer>
-			<class-name>io.vlingo.symbio.store.common.geode.StatePdxSerializer</class-name>
+			<class-name>io.vlingo.symbio.store.common.geode.DynaPdxSerializer</class-name>
 		</pdx-serializer>
 	</pdx>
 	<region name="vlingo-dispatchables" refid="PARTITION_REDUNDANT">

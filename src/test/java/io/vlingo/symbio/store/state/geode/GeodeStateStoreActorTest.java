@@ -32,7 +32,7 @@ import io.vlingo.symbio.StateAdapterProvider;
 import io.vlingo.symbio.store.Result;
 import io.vlingo.symbio.store.common.geode.Configuration;
 import io.vlingo.symbio.store.common.geode.GemFireCacheProvider;
-import io.vlingo.symbio.store.common.geode.StatePdxSerializerRegistry;
+import io.vlingo.symbio.store.common.geode.PdxSerializerRegistry;
 import io.vlingo.symbio.store.state.Entity1;
 import io.vlingo.symbio.store.state.Entity1.Entity1StateAdapter;
 import io.vlingo.symbio.store.state.MetadataPdxSerializer;
@@ -296,7 +296,7 @@ public class GeodeStateStoreActorTest {
   protected static void startGeode() {
     System.out.println("startGeode - entered");
     try {
-      StatePdxSerializerRegistry.serializeTypeWith(Metadata.class, MetadataPdxSerializer.class);
+      PdxSerializerRegistry.serializeTypeWith(Metadata.class, MetadataPdxSerializer.class);
       serverLauncher = new ServerLauncher.Builder()
         .setWorkingDirectory(System.getProperty("user.dir") + "/target")
         .build();

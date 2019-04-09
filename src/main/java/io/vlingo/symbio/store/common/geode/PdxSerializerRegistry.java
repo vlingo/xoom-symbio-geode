@@ -13,12 +13,12 @@ import org.apache.geode.pdx.PdxSerializationException;
 import org.apache.geode.pdx.PdxSerializer;
 import org.apache.geode.pdx.ReflectionBasedAutoSerializer;
 /**
- * StatePdxSerializerMap is responsible for maintaining a registry of
- * {@link PdxSerializer} on a per domain-type basis, and for vending
+ * PdxSerializerRegistry is responsible for maintaining a registry of
+ * {@link PdxSerializer} on a domain-type basis, and for vending
  * an appropriate instance of {@link PdxSerializer} for a given
  * fully-qualified class name.
  */
-public class StatePdxSerializerRegistry {
+public class PdxSerializerRegistry {
   
   private static final Map<String, String> SerializerClassByType = new ConcurrentHashMap<>();
 

@@ -13,19 +13,16 @@ import org.apache.geode.cache.Declarable;
 import org.apache.geode.pdx.PdxReader;
 import org.apache.geode.pdx.PdxSerializer;
 import org.apache.geode.pdx.PdxWriter;
-
-import io.vlingo.symbio.State;
 /**
- * StatePdxSerializer is responsible for serializing instances of
- * {@link State}. This implementation delegates to an appropriate
- * kind of {@link PdxSerializer}, as determined by the serializer
- * registry {@link StatePdxSerializerRegistry}.
+ * DynaPdxSerializer is a {@link PdxSerializer} that delegates to an
+ * appropriate kind of {@link PdxSerializer}, as determined by the
+ * configuration held in {@link PdxSerializerRegistry}.
  */
-public class StatePdxSerializer implements PdxSerializer, Declarable {
+public class DynaPdxSerializer implements PdxSerializer, Declarable {
   
   private Map<String, PdxSerializer> serializersByType = new ConcurrentHashMap<>();
   
-  public StatePdxSerializer() {
+  public DynaPdxSerializer() {
     super();
   }
 
@@ -49,7 +46,7 @@ public class StatePdxSerializer implements PdxSerializer, Declarable {
     String fqcn = c.getName().replace("$", ".");
     PdxSerializer serializer = serializersByType.get(fqcn);
     if (serializer == null) {
-      serializer = StatePdxSerializerRegistry.serializerForType(fqcn);
+      serializer = PdxSerializerRegistry.serializerForType(fqcn);
       serializersByType.put(fqcn, serializer);
       System.out.println(fqcn + " will be serialized by " + serializer);
     }
