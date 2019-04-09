@@ -60,24 +60,24 @@ public class GeodeObjectStoreActor extends Actor implements ObjectStore {
     final PersistentObjectMapper mapper = mappers.get(objectToPersist.getClass());
     GeodePersistentObjectMapping mapping = mapper.persistMapper();
     
-    Region<Long, VersionedPersistentObject> region = cache.getRegion(mapping.regionName);
-    if (region == null) {
+    Region<Long, VersionedPersistentObject> aggregateRegion = cache.getRegion(mapping.regionName);
+    if (aggregateRegion == null) {
       interest.persistResultedIn(Failure.of(new StorageException(Result.NoTypeStore, "Region not configured: " + mapping.regionName)), objectToPersist, 1, 0, object);
       return;
     }
     
     try {
-      final VersionedPersistentObject mutatedObject = VersionedPersistentObject.from(objectToPersist);
-      final VersionedPersistentObject persistedObject = region.get(mutatedObject.persistenceId());
-      if (persistedObject != null) {
-        final int persistedObjectVersion = persistedObject.version();
-        final int mutatedObjectVersion = mutatedObject.version();
-        if (persistedObjectVersion > mutatedObjectVersion) {
+      final VersionedPersistentObject mutatedAggregate = VersionedPersistentObject.from(objectToPersist);
+      final VersionedPersistentObject persistedAggregate = aggregateRegion.get(mutatedAggregate.persistenceId());
+      if (persistedAggregate != null) {
+        final int persistedAggregateVersion = persistedAggregate.version();
+        final int mutatedAggregateVersion = mutatedAggregate.version();
+        if (persistedAggregateVersion > mutatedAggregateVersion) {
           interest.persistResultedIn(Failure.of(new StorageException(Result.ConcurrentyViolation, "Version conflict.")), objectToPersist, 1, 0, object);
         }
       }
-      mutatedObject.incrementVersion();
-      region.put(mutatedObject.persistenceId(), mutatedObject);
+      mutatedAggregate.incrementVersion();
+      aggregateRegion.put(mutatedAggregate.persistenceId(), mutatedAggregate);
       
       //TODO: persist sources
       
