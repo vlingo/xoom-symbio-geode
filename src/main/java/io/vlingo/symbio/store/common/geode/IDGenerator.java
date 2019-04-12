@@ -5,6 +5,8 @@
 // was not distributed with this file, You can obtain
 // one at https://mozilla.org/MPL/2.0/.
 package io.vlingo.symbio.store.common.geode;
+
+import io.vlingo.common.Completes;
 /**
  * IDGenerator is responsible for vending unique identifiers of type {@code T}
  * from a named sequence.
@@ -22,5 +24,5 @@ public interface IDGenerator<T> {
    * @return the next identifier of type {@code T} from the
    * sequence named {@code sequenceName}
    */
-  T next(final String sequenceName);
+  Completes<T> next(final String sequenceName);
 }

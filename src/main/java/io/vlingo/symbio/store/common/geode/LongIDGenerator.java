@@ -21,7 +21,7 @@ import org.apache.logging.log4j.util.Strings;
  * LongIDGenerator is responsible for generating identifiers of
  * type {@link Long} from a named sequence.
  */
-public class LongIDGenerator implements IDGenerator<Long> {
+public class LongIDGenerator {
   
   private static final Long DEFAULT_ALLOCATION_SIZE = 100L;
 
@@ -60,8 +60,16 @@ public class LongIDGenerator implements IDGenerator<Long> {
     return allocationSize;
   }
 
-  /* @see io.vlingo.symbio.store.common.geode.IDGenerator#next(java.lang.String) */
-  @Override
+  /**
+   * Return the next Long-valued identifier for the sequence
+   * named {@code sequenceName}
+   * 
+   * @param sequenceName the name of the sequence from which
+   * an identifier is requested
+   * 
+   * @return the next Long-valued identifier for the sequence
+   * named {@code sequenceName}
+   */
   public Long next(String sequenceName) {
     return allocationFor(sequenceName).next();
   }
