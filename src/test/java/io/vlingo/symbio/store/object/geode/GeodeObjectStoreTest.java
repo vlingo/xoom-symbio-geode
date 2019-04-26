@@ -41,7 +41,7 @@ import io.vlingo.symbio.store.object.ObjectStoreReader.QueryMultiResults;
 import io.vlingo.symbio.store.object.ObjectStoreReader.QuerySingleResult;
 import io.vlingo.symbio.store.object.PersistentObjectMapper;
 import io.vlingo.symbio.store.object.QueryExpression;
-import io.vlingo.symbio.store.object.VersionedPersistentObject;
+import io.vlingo.symbio.store.object.PersistentObject;
 import io.vlingo.symbio.store.state.geode.GeodeQueries;
 /**
  * GeodeObjectStoreTest
@@ -66,7 +66,7 @@ public class GeodeObjectStoreTest {
     
     final long greenLanternId = 300L;
     final Person greenLantern = new Person("Green Lantern", 30, greenLanternId);
-    assertEquals(VersionedPersistentObject.INITIAL_VERSION, greenLantern.version());
+    assertEquals(0L, greenLantern.version());
     objectStore.persist(greenLantern, persistInterest);
     
     final Person storedgreenLantern = persistAccess.readFrom("persistedObject");
@@ -74,7 +74,7 @@ public class GeodeObjectStoreTest {
     assertEquals(greenLantern, storedgreenLantern);
     assertEquals(1, (int) persistAccess.readFrom("expectedPersistCount"));
     assertEquals(1, (int) persistAccess.readFrom("actualPersistCount"));
-    assertEquals(VersionedPersistentObject.INITIAL_VERSION + 1, storedgreenLantern.version());
+    assertEquals(1L, storedgreenLantern.version());
 
     final MockQueryResultInterest queryInterest = new MockQueryResultInterest();
     final AccessSafely queryAccess = queryInterest.afterCompleting(1);
@@ -142,7 +142,7 @@ public class GeodeObjectStoreTest {
     
     final long greenLanternId = 300L;
     final Person greenLantern = new Person("Green Lantern", 30, greenLanternId);
-    assertEquals(VersionedPersistentObject.INITIAL_VERSION, greenLantern.version());
+    assertEquals(0L, greenLantern.version());
     objectStore.persist(greenLantern, persistInterest);
     
     assertEquals(Result.Success, persistAccess.readFrom("persistResult"));
@@ -354,7 +354,7 @@ public class GeodeObjectStoreTest {
   
   private void clearEntities(GemFireCache cache) {
     for (GeodePersistentObjectMapping mapping : registeredMappings) {
-      Region<Long, VersionedPersistentObject> region = cache.getRegion(mapping.regionName);
+      Region<Long, PersistentObject> region = cache.getRegion(mapping.regionName);
       if (region != null) {
         Set<?> keys = region.keySet();
         for (Object key : keys) {

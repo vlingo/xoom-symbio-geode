@@ -28,12 +28,12 @@ import io.vlingo.symbio.store.StorageException;
 import io.vlingo.symbio.store.common.geode.Configuration;
 import io.vlingo.symbio.store.common.geode.GemFireCacheProvider;
 import io.vlingo.symbio.store.object.ObjectStore;
+import io.vlingo.symbio.store.object.PersistentObject;
 import io.vlingo.symbio.store.object.PersistentObjectMapper;
 import io.vlingo.symbio.store.object.QueryExpression;
-import io.vlingo.symbio.store.object.VersionedPersistentObject;
 /**
  * GeodeObjectStoreActor is an {@link ObjectStore} that knows how to
- * read/write {@link VersionedPersistentObject} from/to Apache Geode.
+ * read/write {@link PersistentObject} from/to Apache Geode.
  */
 public class GeodeObjectStoreActor extends Actor implements ObjectStore {
   
@@ -60,18 +60,18 @@ public class GeodeObjectStoreActor extends Actor implements ObjectStore {
     final PersistentObjectMapper mapper = mappers.get(objectToPersist.getClass());
     GeodePersistentObjectMapping mapping = mapper.persistMapper();
     
-    Region<Long, VersionedPersistentObject> aggregateRegion = cache.getRegion(mapping.regionName);
+    Region<Long, PersistentObject> aggregateRegion = cache.getRegion(mapping.regionName);
     if (aggregateRegion == null) {
       interest.persistResultedIn(Failure.of(new StorageException(Result.NoTypeStore, "Region not configured: " + mapping.regionName)), objectToPersist, 1, 0, object);
       return;
     }
     
     try {
-      final VersionedPersistentObject mutatedAggregate = VersionedPersistentObject.from(objectToPersist);
-      final VersionedPersistentObject persistedAggregate = aggregateRegion.get(mutatedAggregate.persistenceId());
+      final PersistentObject mutatedAggregate = PersistentObject.from(objectToPersist);
+      final PersistentObject persistedAggregate = aggregateRegion.get(mutatedAggregate.persistenceId());
       if (persistedAggregate != null) {
-        final int persistedAggregateVersion = persistedAggregate.version();
-        final int mutatedAggregateVersion = mutatedAggregate.version();
+        final long persistedAggregateVersion = persistedAggregate.version();
+        final long mutatedAggregateVersion = mutatedAggregate.version();
         if (persistedAggregateVersion > mutatedAggregateVersion) {
           interest.persistResultedIn(Failure.of(new StorageException(Result.ConcurrentyViolation, "Version conflict.")), objectToPersist, 1, 0, object);
         }
@@ -93,8 +93,8 @@ public class GeodeObjectStoreActor extends Actor implements ObjectStore {
     
     try {
       String regionName = null;
-      Region<Long, VersionedPersistentObject> region = null;
-      Map<Long, VersionedPersistentObject> newEntries = new HashMap<>();
+      Region<Long, PersistentObject> region = null;
+      Map<Long, PersistentObject> newEntries = new HashMap<>();
       for (Object objectToPersist : objectsToPersist) {
         
         final PersistentObjectMapper mapper = mappers.get(objectToPersist.getClass());
@@ -123,14 +123,14 @@ public class GeodeObjectStoreActor extends Actor implements ObjectStore {
           return;
         }
         
-        final VersionedPersistentObject mutatedObject = VersionedPersistentObject.from(objectToPersist);
-        final VersionedPersistentObject persistedObject = region.get(mutatedObject.persistenceId());
+        final PersistentObject mutatedObject = PersistentObject.from(objectToPersist);
+        final PersistentObject persistedObject = region.get(mutatedObject.persistenceId());
         if (persistedObject == null) {
           newEntries.put(mutatedObject.persistenceId(), mutatedObject);
         }
         else {
-          final int persistedObjectVersion = persistedObject.version();
-          final int mutatedObjectVersion = mutatedObject.version();
+          final long persistedObjectVersion = persistedObject.version();
+          final long mutatedObjectVersion = mutatedObject.version();
           if (persistedObjectVersion > mutatedObjectVersion) {
             interest.persistResultedIn(
               Failure.of(new StorageException(
@@ -235,17 +235,17 @@ public class GeodeObjectStoreActor extends Actor implements ObjectStore {
     final PersistentObjectMapper mapper = mappers.get(objectToPersist.getClass());
     GeodePersistentObjectMapping mapping = mapper.persistMapper();
 
-    Region<Long, VersionedPersistentObject> region = cache.getRegion(mapping.regionName);
+    Region<Long, PersistentObject> region = cache.getRegion(mapping.regionName);
     if (region == null) {
       return Failure.of(new StorageException(Result.NoTypeStore, "Region not configured: " + mapping.regionName));
     }
     
-    final VersionedPersistentObject mutatedObject = VersionedPersistentObject.from(objectToPersist);
+    final PersistentObject mutatedObject = PersistentObject.from(objectToPersist);
     try {
-      VersionedPersistentObject persistedObject = region.putIfAbsent(mutatedObject.persistenceId(), mutatedObject);
+      PersistentObject persistedObject = region.putIfAbsent(mutatedObject.persistenceId(), mutatedObject);
       if (persistedObject != null) {
-        final int persistedObjectVersion = persistedObject.version();
-        final int mutatedObjectVersion = mutatedObject.version();
+        final long persistedObjectVersion = persistedObject.version();
+        final long mutatedObjectVersion = mutatedObject.version();
         if (persistedObjectVersion > mutatedObjectVersion) {
           return Failure.of(new StorageException(Result.ConcurrentyViolation, "Version conflict."));
         }

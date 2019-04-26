@@ -7,9 +7,9 @@
 
 package io.vlingo.symbio.store.object.geode;
 
-import io.vlingo.symbio.store.object.VersionedPersistentObject;
+import io.vlingo.symbio.store.object.PersistentObject;
 
-public class Person extends VersionedPersistentObject {
+public class Person extends PersistentObject {
   private static final long serialVersionUID = 1L;
 
   public final long id;
@@ -17,13 +17,13 @@ public class Person extends VersionedPersistentObject {
   public final String name;
 
   public Person(final String name, final int age, final long persistenceId) {
-    super(persistenceId, VersionedPersistentObject.INITIAL_VERSION);
+    super(persistenceId);
     this.name = name;
     this.age = age;
     this.id = persistenceId;
   }
   
-  protected Person(final String name, final int age, final long persistenceId, final int version) {
+  protected Person(final String name, final int age, final long persistenceId, final long version) {
     super(persistenceId, version);
     this.name = name;
     this.age = age;
