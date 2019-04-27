@@ -27,14 +27,15 @@ public class MockPersistResultInterest implements PersistResultInterest {
   public AtomicInteger expectedPersistCount = new AtomicInteger(0);
   public AtomicInteger actualPersistCount = new AtomicInteger(0);
 
-  /* @see io.vlingo.symbio.store.object.ObjectStore.PersistResultInterest#persistResultedIn(io.vlingo.common.Outcome, java.lang.Object, int, int, java.lang.Object) */
+  /* @see io.vlingo.symbio.store.object.ObjectStoreWriter.PersistResultInterest#persistResultedIn(io.vlingo.common.Outcome, io.vlingo.symbio.store.object.PersistentObject, int, int, java.lang.Object) */
   @Override
   public void persistResultedIn(
-    final Outcome<StorageException, Result> outcome,
-    final Object persistentObject,
-    final int expected,
-    final int actual,
-    final Object object) {
+          final Outcome<StorageException, Result> outcome,
+          final Object persistentObject, 
+          final int expected, 
+          final int actual, 
+          final Object object) {
+    
     outcome
       .andThen(result -> {
         access.writeUsing("persistObjectData", new StoreData(null, result, persistentObject, expected, actual));

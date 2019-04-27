@@ -250,7 +250,7 @@ public class GeodeObjectStoreTest {
     final Person theWasp2 = queriedTheWasp1.withName(theWasp2Name);
     final Person ironMan2 = queriedIronMan1.withName(ironMan2Name);
     
-    Collection<Object> updatedPeople = Arrays.asList(greenLantern2, theWasp2, ironMan2);
+    Collection<Person> updatedPeople = Arrays.asList(greenLantern2, theWasp2, ironMan2);
     
     objectStore.persistAll(updatedPeople, updateInterest);
     

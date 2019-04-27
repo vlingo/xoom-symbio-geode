@@ -55,7 +55,7 @@ public class GeodeObjectStoreActor extends Actor implements ObjectStore {
   }
   
   @Override
-  public <E> void persist(final Object objectToPersist, final List<Source<E>> sources, final long updateId, final PersistResultInterest interest, final Object object) {
+  public <T extends PersistentObject, E> void persist(final T objectToPersist, final List<Source<E>> sources, final long updateId, final PersistResultInterest interest, final Object object) {
     
     final PersistentObjectMapper mapper = mappers.get(objectToPersist.getClass());
     GeodePersistentObjectMapping mapping = mapper.persistMapper();
@@ -67,7 +67,7 @@ public class GeodeObjectStoreActor extends Actor implements ObjectStore {
     }
     
     try {
-      final PersistentObject mutatedAggregate = PersistentObject.from(objectToPersist);
+      final PersistentObject mutatedAggregate = objectToPersist;
       final PersistentObject persistedAggregate = aggregateRegion.get(mutatedAggregate.persistenceId());
       if (persistedAggregate != null) {
         final long persistedAggregateVersion = persistedAggregate.version();
@@ -89,13 +89,13 @@ public class GeodeObjectStoreActor extends Actor implements ObjectStore {
   }
 
   @Override
-  public <E> void persistAll(final Collection<Object> objectsToPersist, final List<Source<E>> sources, final long updateId, final PersistResultInterest interest, final Object object) {
+  public <T extends PersistentObject, E> void persistAll(final Collection<T> objectsToPersist, final List<Source<E>> sources, final long updateId, final PersistResultInterest interest, final Object object) {
     
     try {
       String regionName = null;
       Region<Long, PersistentObject> region = null;
       Map<Long, PersistentObject> newEntries = new HashMap<>();
-      for (Object objectToPersist : objectsToPersist) {
+      for (T objectToPersist : objectsToPersist) {
         
         final PersistentObjectMapper mapper = mappers.get(objectToPersist.getClass());
         GeodePersistentObjectMapping mapping = mapper.persistMapper();
@@ -123,7 +123,7 @@ public class GeodeObjectStoreActor extends Actor implements ObjectStore {
           return;
         }
         
-        final PersistentObject mutatedObject = PersistentObject.from(objectToPersist);
+        final PersistentObject mutatedObject = objectToPersist;
         final PersistentObject persistedObject = region.get(mutatedObject.persistenceId());
         if (persistedObject == null) {
           newEntries.put(mutatedObject.persistenceId(), mutatedObject);
