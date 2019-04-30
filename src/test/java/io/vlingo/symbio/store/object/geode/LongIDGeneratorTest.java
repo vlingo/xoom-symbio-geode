@@ -25,10 +25,10 @@ import io.vlingo.actors.Definition;
 import io.vlingo.actors.World;
 import io.vlingo.symbio.store.common.geode.Configuration;
 import io.vlingo.symbio.store.common.geode.GemFireCacheProvider;
-import io.vlingo.symbio.store.common.geode.IDGenerator;
-import io.vlingo.symbio.store.common.geode.LongIDGenerator;
-import io.vlingo.symbio.store.common.geode.LongIDGeneratorActor;
-import io.vlingo.symbio.store.common.geode.LongSequence;
+import io.vlingo.symbio.store.common.geode.identity.IDGenerator;
+import io.vlingo.symbio.store.common.geode.identity.LongIDGenerator;
+import io.vlingo.symbio.store.common.geode.identity.LongIDGeneratorActor;
+import io.vlingo.symbio.store.common.geode.identity.LongSequence;
 /**
  * LongIDGeneratorTest
  */

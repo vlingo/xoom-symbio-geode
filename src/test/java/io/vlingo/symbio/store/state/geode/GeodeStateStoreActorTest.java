@@ -32,7 +32,7 @@ import io.vlingo.symbio.StateAdapterProvider;
 import io.vlingo.symbio.store.Result;
 import io.vlingo.symbio.store.common.geode.Configuration;
 import io.vlingo.symbio.store.common.geode.GemFireCacheProvider;
-import io.vlingo.symbio.store.common.geode.PdxSerializerRegistry;
+import io.vlingo.symbio.store.common.geode.pdx.PdxSerializerRegistry;
 import io.vlingo.symbio.store.state.Entity1;
 import io.vlingo.symbio.store.state.Entity1.Entity1StateAdapter;
 import io.vlingo.symbio.store.state.MetadataPdxSerializer;

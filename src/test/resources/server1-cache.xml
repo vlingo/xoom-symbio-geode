@@ -5,7 +5,7 @@
 	version="1.0">
 	<pdx>
 		<pdx-serializer>
-			<class-name>io.vlingo.symbio.store.common.geode.DynaPdxSerializer</class-name>
+			<class-name>io.vlingo.symbio.store.common.geode.pdx.DynaPdxSerializer</class-name>
 		</pdx-serializer>
 	</pdx>
 	<region name="vlingo-dispatchables" refid="PARTITION_REDUNDANT" />
@@ -14,7 +14,7 @@
 	<region name="TestSequences" refid="PARTITION_REDUNDANT" />
 	<function-service>
 		<function>
-			<class-name>io.vlingo.symbio.store.common.geode.LongIDAllocator</class-name>
+			<class-name>io.vlingo.symbio.store.common.geode.identity.LongIDAllocator</class-name>
 		</function>
 	</function-service>
 </cache>

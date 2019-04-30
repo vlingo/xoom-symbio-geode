@@ -4,10 +4,11 @@
 // Mozilla Public License, v. 2.0. If a copy of the MPL
 // was not distributed with this file, You can obtain
 // one at https://mozilla.org/MPL/2.0/.
-package io.vlingo.symbio.store.common.geode;
+package io.vlingo.symbio.store.common.geode.identity;
 
 import io.vlingo.actors.Actor;
 import io.vlingo.common.Completes;
+import io.vlingo.symbio.store.common.geode.Configuration;
 /**
  * LongIDGeneratorActor
  */

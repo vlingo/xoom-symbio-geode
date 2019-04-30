@@ -4,7 +4,7 @@
 // Mozilla Public License, v. 2.0. If a copy of the MPL
 // was not distributed with this file, You can obtain
 // one at https://mozilla.org/MPL/2.0/.
-package io.vlingo.symbio.store.common.geode;
+package io.vlingo.symbio.store.common.geode.identity;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -17,6 +17,9 @@ import org.apache.geode.cache.Region;
 import org.apache.geode.cache.execute.FunctionService;
 import org.apache.geode.cache.execute.ResultCollector;
 import org.apache.logging.log4j.util.Strings;
+
+import io.vlingo.symbio.store.common.geode.Configuration;
+import io.vlingo.symbio.store.common.geode.GemFireCacheProvider;
 /**
  * LongIDGenerator is responsible for generating identifiers of
  * type {@link Long} from a named sequence.

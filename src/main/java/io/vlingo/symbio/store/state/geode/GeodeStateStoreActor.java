@@ -31,7 +31,7 @@ import io.vlingo.symbio.store.Result;
 import io.vlingo.symbio.store.StorageException;
 import io.vlingo.symbio.store.common.geode.Configuration;
 import io.vlingo.symbio.store.common.geode.GemFireCacheProvider;
-import io.vlingo.symbio.store.common.geode.PdxSerializerRegistry;
+import io.vlingo.symbio.store.common.geode.pdx.PdxSerializerRegistry;
 import io.vlingo.symbio.store.state.GeodeDispatchableSerializer;
 import io.vlingo.symbio.store.state.StateStore;
 import io.vlingo.symbio.store.state.StateStoreEntryReader;

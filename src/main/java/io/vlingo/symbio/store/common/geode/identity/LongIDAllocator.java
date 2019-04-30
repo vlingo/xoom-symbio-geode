@@ -5,7 +5,7 @@
 // was not distributed with this file, You can obtain
 // one at https://mozilla.org/MPL/2.0/.
 
-package io.vlingo.symbio.store.common.geode;
+package io.vlingo.symbio.store.common.geode.identity;
 
 import java.util.Set;
 
