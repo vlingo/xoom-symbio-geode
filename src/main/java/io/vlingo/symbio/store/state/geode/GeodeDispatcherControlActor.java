@@ -6,18 +6,6 @@
 // one at https://mozilla.org/MPL/2.0/.
 package io.vlingo.symbio.store.state.geode;
 
-import java.time.Duration;
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-
-import org.apache.geode.cache.Cache;
-import org.apache.geode.cache.Region;
-import org.apache.geode.cache.query.Query;
-import org.apache.geode.cache.query.QueryService;
-import org.apache.geode.cache.query.SelectResults;
-
 import io.vlingo.actors.Actor;
 import io.vlingo.common.Cancellable;
 import io.vlingo.common.Scheduled;
@@ -27,6 +15,17 @@ import io.vlingo.symbio.store.state.StateStore.ConfirmDispatchedResultInterest;
 import io.vlingo.symbio.store.state.StateStore.Dispatchable;
 import io.vlingo.symbio.store.state.StateStore.Dispatcher;
 import io.vlingo.symbio.store.state.StateStore.DispatcherControl;
+import org.apache.geode.cache.Cache;
+import org.apache.geode.cache.Region;
+import org.apache.geode.cache.query.Query;
+import org.apache.geode.cache.query.QueryService;
+import org.apache.geode.cache.query.SelectResults;
+
+import java.time.Duration;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 /**
  * GeodeDispatcherControlActor is responsible for requesting re-dispatch
  * of the unconfirmed {@link Dispatchable} of a GeodeStateStoreActor on a
@@ -82,7 +81,7 @@ implements DispatcherControl, Scheduled<Object> {
       }
     }
     catch (Exception ex) {
-      logger().log(getClass().getSimpleName() + " dispatchUnconfirmed() failed because: " + ex.getMessage(), ex);
+      logger().error(getClass().getSimpleName() + " dispatchUnconfirmed() failed because: " + ex.getMessage(), ex);
     }
   }
   
