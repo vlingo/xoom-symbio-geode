@@ -6,14 +6,6 @@
 // one at https://mozilla.org/MPL/2.0/.
 package io.vlingo.symbio.store.state.geode;
 
-import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
-import org.apache.geode.cache.GemFireCache;
-import org.apache.geode.cache.Region;
-
 import io.vlingo.actors.Actor;
 import io.vlingo.actors.Definition;
 import io.vlingo.common.Completes;
@@ -36,6 +28,13 @@ import io.vlingo.symbio.store.state.GeodeDispatchableSerializer;
 import io.vlingo.symbio.store.state.StateStore;
 import io.vlingo.symbio.store.state.StateStoreEntryReader;
 import io.vlingo.symbio.store.state.StateTypeStateStoreMap;
+import org.apache.geode.cache.GemFireCache;
+import org.apache.geode.cache.Region;
+
+import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 /**
  * GeodeStateStoreActor is responsible for reading and writing
  * objects from/to a GemFire cache.
@@ -186,7 +185,7 @@ public class GeodeStateStoreActor extends Actor implements StateStore {
       }
     }
     else {
-      logger().log(getClass().getSimpleName() + " readFor() missing ReadResultInterest for: " + (id == null ? "unknown id" : id));
+      logger().warn(getClass().getSimpleName() + " readFor() missing ReadResultInterest for: " + (id == null ? "unknown id" : id));
     }
   }
 
@@ -198,7 +197,7 @@ public class GeodeStateStoreActor extends Actor implements StateStore {
   private <S,C> void writeWith(final String id, final S state, final int stateVersion, final List<Source<C>> sources, final Metadata metadata, final WriteResultInterest interest, final Object object) {
 
     if (interest == null) {
-      logger().log(
+      logger().warn(
         getClass().getSimpleName() +
         " writeWith() missing WriteResultInterest for: " +
         (state == null ? "unknown id" : id));
@@ -273,7 +272,7 @@ public class GeodeStateStoreActor extends Actor implements StateStore {
       interest.writeResultedIn(Success.of(Result.Success), id, state, stateVersion, sources, object);
     }
     catch (Exception e) {
-      logger().log(getClass().getSimpleName() + " writeWith() error because: " + e.getMessage(), e);
+      logger().error(getClass().getSimpleName() + " writeWith() error because: " + e.getMessage(), e);
       interest.writeResultedIn(Failure.of(new StorageException(Result.Error, e.getMessage(), e)), id, state, stateVersion, sources, object);
     }
   }
