@@ -11,11 +11,13 @@ import io.vlingo.common.Cancellable;
 import io.vlingo.common.Scheduled;
 import io.vlingo.symbio.State.ObjectState;
 import io.vlingo.symbio.store.Result;
+import io.vlingo.symbio.store.StorageException;
+import io.vlingo.symbio.store.common.geode.GemFireCacheProvider;
 import io.vlingo.symbio.store.state.StateStore.ConfirmDispatchedResultInterest;
 import io.vlingo.symbio.store.state.StateStore.Dispatchable;
 import io.vlingo.symbio.store.state.StateStore.Dispatcher;
 import io.vlingo.symbio.store.state.StateStore.DispatcherControl;
-import org.apache.geode.cache.Cache;
+import org.apache.geode.cache.GemFireCache;
 import org.apache.geode.cache.Region;
 import org.apache.geode.cache.query.Query;
 import org.apache.geode.cache.query.QueryService;
@@ -26,6 +28,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 /**
  * GeodeDispatcherControlActor is responsible for requesting re-dispatch
  * of the unconfirmed {@link Dispatchable} of a GeodeStateStoreActor on a
@@ -38,17 +41,15 @@ implements DispatcherControl, Scheduled<Object> {
   
   public final static long DEFAULT_REDISPATCH_DELAY = 2000L;
 
-  private final Cache cache;
   private final String originatorId;
   private final Dispatcher dispatcher;
   private final long confirmationExpiration;
   private final Cancellable cancellable;
-  private Query allUnconfirmedDispatablesQuery;
+  private Query allUnconfirmedDispatchablesQuery;
   
   @SuppressWarnings("unchecked")
-  public GeodeDispatcherControlActor(final String originatorId, final Dispatcher dispatcher, final Cache cache, final long checkConfirmationExpirationInterval, final long confirmationExpiration) {
+  public GeodeDispatcherControlActor(final String originatorId, final Dispatcher dispatcher,final long checkConfirmationExpirationInterval, final long confirmationExpiration) {
     this.originatorId = originatorId;
-    this.cache = cache;
     this.dispatcher = dispatcher;
     this.confirmationExpiration = confirmationExpiration;
     this.cancellable = scheduler().schedule(selfAs(Scheduled.class), null, DEFAULT_REDISPATCH_DELAY, checkConfirmationExpirationInterval);
@@ -62,7 +63,7 @@ implements DispatcherControl, Scheduled<Object> {
   @Override
   public void confirmDispatched(String dispatchId, ConfirmDispatchedResultInterest interest) {
     Region<String, GeodeDispatchable<ObjectState<Object>>> region =
-      cache.getRegion(GeodeQueries.DISPATCHABLES_REGION_NAME);
+      cache().getRegion(GeodeQueries.DISPATCHABLES_REGION_PATH);
     region.remove(dispatchId);
     interest.confirmDispatchedResultedIn(Result.Success, dispatchId);
   }
@@ -98,11 +99,11 @@ implements DispatcherControl, Scheduled<Object> {
   }
   
   private Query allUnconfirmedDispatchablesQuery() {
-    if (allUnconfirmedDispatablesQuery == null) {
-      QueryService queryService = cache.getQueryService();
-      allUnconfirmedDispatablesQuery = queryService.newQuery(GeodeQueries.OQL_DISPATCHABLES_SELECT);
+    if (allUnconfirmedDispatchablesQuery == null) {
+      QueryService queryService = cache().getQueryService();
+      allUnconfirmedDispatchablesQuery = queryService.newQuery(GeodeQueries.OQL_DISPATCHABLES_SELECT);
     }
-    return allUnconfirmedDispatablesQuery;
+    return allUnconfirmedDispatchablesQuery;
   }
 
   @Override
@@ -110,6 +111,16 @@ implements DispatcherControl, Scheduled<Object> {
     super.afterStop();
     if (cancellable != null) {
       cancellable.cancel();
+    }
+  }
+
+  private GemFireCache cache() {
+    Optional<GemFireCache> cacheOrNull = GemFireCacheProvider.getAnyInstance();
+    if (cacheOrNull.isPresent()) {
+      return cacheOrNull.get();
+    }
+    else {
+      throw new StorageException(Result.NoTypeStore, "No GemFireCache has been created in this JVM");
     }
   }
 }

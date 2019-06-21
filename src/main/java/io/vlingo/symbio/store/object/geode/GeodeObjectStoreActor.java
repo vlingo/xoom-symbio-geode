@@ -6,18 +6,6 @@
 // one at https://mozilla.org/MPL/2.0/.
 package io.vlingo.symbio.store.object.geode;
 
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
-import org.apache.geode.cache.GemFireCache;
-import org.apache.geode.cache.Region;
-import org.apache.geode.cache.query.Query;
-import org.apache.geode.cache.query.QueryService;
-import org.apache.geode.cache.query.SelectResults;
-
 import io.vlingo.actors.Actor;
 import io.vlingo.common.Failure;
 import io.vlingo.common.Outcome;
@@ -25,50 +13,53 @@ import io.vlingo.common.Success;
 import io.vlingo.symbio.Source;
 import io.vlingo.symbio.store.Result;
 import io.vlingo.symbio.store.StorageException;
-import io.vlingo.symbio.store.common.geode.Configuration;
 import io.vlingo.symbio.store.common.geode.GemFireCacheProvider;
 import io.vlingo.symbio.store.object.ObjectStore;
 import io.vlingo.symbio.store.object.PersistentObject;
 import io.vlingo.symbio.store.object.PersistentObjectMapper;
 import io.vlingo.symbio.store.object.QueryExpression;
+import org.apache.geode.cache.GemFireCache;
+import org.apache.geode.cache.Region;
+import org.apache.geode.cache.query.Query;
+import org.apache.geode.cache.query.QueryService;
+import org.apache.geode.cache.query.SelectResults;
+
+import java.util.*;
 /**
  * GeodeObjectStoreActor is an {@link ObjectStore} that knows how to
  * read/write {@link PersistentObject} from/to Apache Geode.
  */
 public class GeodeObjectStoreActor extends Actor implements ObjectStore {
-  
+
   private boolean closed;
-  private final GemFireCache cache;
   private final Map<Class<?>,PersistentObjectMapper> mappers;
 
-  public GeodeObjectStoreActor(final Configuration config) {
-    this.cache = GemFireCacheProvider.getAnyInstance(config);
+  public GeodeObjectStoreActor() {
     this.mappers = new HashMap<>();
   }
 
-  /* @see io.vlingo.symbio.store.object.ObjectStore#close() */
   @Override
   public void close() {
     if (!closed) {
       closed = true;
     }
   }
-  
+
   @Override
   public <T extends PersistentObject, E> void persist(final T objectToPersist, final List<Source<E>> sources, final long updateId, final PersistResultInterest interest, final Object object) {
     
     final PersistentObjectMapper mapper = mappers.get(objectToPersist.getClass());
     GeodePersistentObjectMapping mapping = mapper.persistMapper();
     
-    Region<Long, PersistentObject> aggregateRegion = cache.getRegion(mapping.regionName);
+    Region<Long, T> aggregateRegion = cache().getRegion(mapping.regionName);
     if (aggregateRegion == null) {
       interest.persistResultedIn(Failure.of(new StorageException(Result.NoTypeStore, "Region not configured: " + mapping.regionName)), objectToPersist, 1, 0, object);
       return;
     }
     
     try {
-      final PersistentObject mutatedAggregate = objectToPersist;
-      final PersistentObject persistedAggregate = aggregateRegion.get(mutatedAggregate.persistenceId());
+      final T mutatedAggregate = objectToPersist;
+      final T persistedAggregate = aggregateRegion.get(mutatedAggregate.persistenceId());
       if (persistedAggregate != null) {
         final long persistedAggregateVersion = persistedAggregate.version();
         final long mutatedAggregateVersion = mutatedAggregate.version();
@@ -93,8 +84,8 @@ public class GeodeObjectStoreActor extends Actor implements ObjectStore {
     
     try {
       String regionName = null;
-      Region<Long, PersistentObject> region = null;
-      Map<Long, PersistentObject> newEntries = new HashMap<>();
+      Region<Long, T> region = null;
+      Map<Long, T> newEntries = new HashMap<>();
       for (T objectToPersist : objectsToPersist) {
         
         final PersistentObjectMapper mapper = mappers.get(objectToPersist.getClass());
@@ -102,7 +93,7 @@ public class GeodeObjectStoreActor extends Actor implements ObjectStore {
         
         if (region == null) {
           regionName = mapping.regionName;
-          region = cache.getRegion(regionName);
+          region = cache().getRegion(regionName);
         }
         else if (!regionName.equals(mapping.regionName)) {
           /*
@@ -123,8 +114,8 @@ public class GeodeObjectStoreActor extends Actor implements ObjectStore {
           return;
         }
         
-        final PersistentObject mutatedObject = objectToPersist;
-        final PersistentObject persistedObject = region.get(mutatedObject.persistenceId());
+        final T mutatedObject = objectToPersist;
+        final T persistedObject = region.get(mutatedObject.persistenceId());
         if (persistedObject == null) {
           newEntries.put(mutatedObject.persistenceId(), mutatedObject);
         }
@@ -171,7 +162,7 @@ public class GeodeObjectStoreActor extends Actor implements ObjectStore {
     }
     
     String queryString = expression.query;
-    QueryService queryService = cache.getQueryService();
+    QueryService queryService = cache().getQueryService();
     Query query = queryService.newQuery(queryString);
     
     List<?> queryParms = expression.isListQueryExpression()
@@ -202,7 +193,7 @@ public class GeodeObjectStoreActor extends Actor implements ObjectStore {
     }
     
     String queryString = expression.query;
-    QueryService queryService = cache.getQueryService();
+    QueryService queryService = cache().getQueryService();
     Query query = queryService.newQuery(queryString);
     
     List<?> queryParms = expression.isListQueryExpression()
@@ -235,7 +226,7 @@ public class GeodeObjectStoreActor extends Actor implements ObjectStore {
     final PersistentObjectMapper mapper = mappers.get(objectToPersist.getClass());
     GeodePersistentObjectMapping mapping = mapper.persistMapper();
 
-    Region<Long, PersistentObject> region = cache.getRegion(mapping.regionName);
+    Region<Long, PersistentObject> region = cache().getRegion(mapping.regionName);
     if (region == null) {
       return Failure.of(new StorageException(Result.NoTypeStore, "Region not configured: " + mapping.regionName));
     }
@@ -260,4 +251,15 @@ public class GeodeObjectStoreActor extends Actor implements ObjectStore {
       return Failure.of(new StorageException(Result.Failure, ex.getMessage(), ex));
     }
   }
+
+  private GemFireCache cache() {
+    Optional<GemFireCache> cacheOrNull = GemFireCacheProvider.getAnyInstance();
+    if (cacheOrNull.isPresent()) {
+      return cacheOrNull.get();
+    }
+    else {
+      throw new StorageException(Result.NoTypeStore, "No GemFireCache has been created in this JVM");
+    }
+  }
+
 }

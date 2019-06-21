@@ -6,48 +6,86 @@
 // one at https://mozilla.org/MPL/2.0/.
 package io.vlingo.symbio.store.common.geode;
 
-import org.apache.geode.cache.CacheClosedException;
+import java.util.Optional;
+
+import org.apache.geode.cache.Cache;
 import org.apache.geode.cache.CacheFactory;
 import org.apache.geode.cache.GemFireCache;
+import org.apache.geode.cache.client.ClientCache;
 import org.apache.geode.cache.client.ClientCacheFactory;
 /**
  * GemFireCacheProvider is responsible for vending an appropriate
- * instance of {@link GemFireCache} based on a specified
- * {@link Configuration}.
+ * instance of {@link GemFireCache}.
  */
 public class GemFireCacheProvider {
 
-  public static GemFireCache getAnyInstance(final Configuration config) throws CouldNotAccessCacheException {
-    return config.isPeer() ? serverCache() : clientCache();
+  /**
+   * Returns an {@link Optional} referencing the singleton
+   * {@link GemFireCache} existing in this JVM or null if
+   * no cache has been created yet.
+   *
+   * @return a {@link GemFireCache} or null
+   */
+  public static Optional<GemFireCache> getAnyInstance() {
+    GemFireCache cache = null;
+    try {
+      cache = ClientCacheFactory.getAnyInstance();
+    } catch (Throwable t) {
+      try {
+        cache = CacheFactory.getAnyInstance();
+      }
+      catch (Throwable t2) {
+        cache = null;
+      }
+    }
+    return Optional.ofNullable(cache);
   }
-
-  protected static GemFireCache clientCache() throws CouldNotAccessCacheException {
-    GemFireCache clientCache = null;
+  
+  /**
+   * Returns the singleton {@link ClientCache} in this JVM or
+   * attempts to create a new one. Throws {@link CouldNotAccessCacheException}
+   * if a server {@link Cache} was already created in this JVM
+   * or if the attempt to create a {@link ClientCache} fails
+   * for any reason.
+   *
+   * @return a {@link ClientCache}
+   */
+  public static ClientCache forClient() throws CouldNotAccessCacheException {
+    ClientCache clientCache = null;
     try {
       clientCache = ClientCacheFactory.getAnyInstance();
-    } catch (CacheClosedException ex) {
-      clientCache = new ClientCacheFactory().create();
+    } catch (Throwable t) {
+      try {
+        clientCache = new ClientCacheFactory().create();
+      }
+      catch (Throwable t2) {
+        throw new CouldNotAccessCacheException("Unable to create or access existing ClientCache.", t2);
+      }
     }
-
-    if (clientCache == null) {
-      throw new CouldNotAccessCacheException("Unable to create or access existing client GemFireCache.");
-    }
-
     return clientCache;
   }
 
-  protected static GemFireCache serverCache() throws CouldNotAccessCacheException {
-    GemFireCache serverCache = null;
+  /**
+   * Returns the singleton {@link Cache} in this JVM or attempts to
+   * create a new one. Throws {@link CouldNotAccessCacheException}
+   * if a {@link ClientCache} was already created in this JVM
+   * or if the attempt to create a {@link Cache} fails
+   * for any reason.
+   *
+   * @return a {@link Cache}
+   */
+  public static Cache forPeer() throws CouldNotAccessCacheException {
+    Cache serverCache = null;
     try {
       serverCache = CacheFactory.getAnyInstance();
-    } catch (CacheClosedException ex) {
-      serverCache = new CacheFactory().create();
+    } catch (Throwable t) {
+      try {
+        serverCache = new CacheFactory().create();
+      }
+      catch (Throwable t2) {
+        throw new CouldNotAccessCacheException("Unable to create or access existing Cache.", t2);
+      }
     }
-
-    if (serverCache == null) {
-      throw new CouldNotAccessCacheException("Unable to create or access existing server GemFireCache.");
-    }
-
     return serverCache;
   }
 

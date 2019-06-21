@@ -23,7 +23,6 @@ import org.junit.Test;
 
 import io.vlingo.actors.Definition;
 import io.vlingo.actors.World;
-import io.vlingo.symbio.store.common.geode.Configuration;
 import io.vlingo.symbio.store.common.geode.GemFireCacheProvider;
 import io.vlingo.symbio.store.common.geode.identity.IDGenerator;
 import io.vlingo.symbio.store.common.geode.identity.LongIDGenerator;
@@ -34,16 +33,14 @@ import io.vlingo.symbio.store.common.geode.identity.LongSequence;
  */
 public class LongIDGeneratorTest {
   
-  private static String SEQUENCE_REGION_NAME = "TestSequences";
-
   private static ServerLauncher serverLauncher;
+  private static GemFireCache cache;
   private World world;
-  private Configuration configuration;
   
   @Test
   public void testLongIDGenerator() throws Exception {
     
-    LongIDGenerator generator = new LongIDGenerator(Configuration.define().forPeer(), SEQUENCE_REGION_NAME, 2L);
+    LongIDGenerator generator = new LongIDGenerator(2L);
     
     String customerSeq = "test.Customer";
     String productSeq = "test.Product";
@@ -65,7 +62,7 @@ public class LongIDGeneratorTest {
       IDGenerator.class,
       Definition.has(
         LongIDGeneratorActor.class, 
-        Definition.parameters(configuration, SEQUENCE_REGION_NAME, 4L)));
+        Definition.parameters(4L)));
     
     String customerSeq = "test.Customer";
     String productSeq = "test.Product";
@@ -82,24 +79,21 @@ public class LongIDGeneratorTest {
   
   @BeforeClass
   public static void beforeAllTests() throws Exception {
-    startGeode();
-  }
-  
-  protected static void startGeode() throws Exception{
     System.setProperty("gemfire.Query.VERBOSE","true");
     Path tempDir = Files.createTempDirectory("longIDGeneratorTest");
     serverLauncher = new ServerLauncher.Builder()
       .setWorkingDirectory(tempDir.toString())
       .build();
     serverLauncher.start();
+    cache = GemFireCacheProvider.forPeer();
   }
   
   @AfterClass
   public static void afterAllTests() {
-    stopGeode();
-  }
-  
-  public static void stopGeode() {
+    if (cache == null) {
+      cache.close();
+      cache = null;
+    }
     if (serverLauncher != null) {
       serverLauncher.stop();
       serverLauncher = null;
@@ -109,7 +103,6 @@ public class LongIDGeneratorTest {
   @Before
   public void beforeEachTest() {
     world = World.startWithDefaults("test-world");
-    configuration = Configuration.define().forPeer();
   }
   
   @After
@@ -124,12 +117,7 @@ public class LongIDGeneratorTest {
   }
   
   private void clearCache() {
-    GemFireCache cache = GemFireCacheProvider.getAnyInstance(configuration);
-    clearSequences(cache);
-  }
-
-  private void clearSequences(GemFireCache cache) {
-    Region<String, LongSequence> region = cache.getRegion(SEQUENCE_REGION_NAME);
+    Region<String, LongSequence> region = cache.getRegion(LongIDGenerator.DEFAULT_SEQUENCE_REGION_PATH);
     if (region != null) {
       Set<?> keys = region.keySet();
       for (Object key : keys) {

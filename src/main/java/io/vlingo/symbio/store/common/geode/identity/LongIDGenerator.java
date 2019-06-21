@@ -10,6 +10,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 import org.apache.geode.cache.GemFireCache;
@@ -18,30 +19,42 @@ import org.apache.geode.cache.execute.FunctionService;
 import org.apache.geode.cache.execute.ResultCollector;
 import org.apache.logging.log4j.util.Strings;
 
-import io.vlingo.symbio.store.common.geode.Configuration;
 import io.vlingo.symbio.store.common.geode.GemFireCacheProvider;
 /**
  * LongIDGenerator is responsible for generating identifiers of
  * type {@link Long} from a named sequence.
  */
 public class LongIDGenerator {
-  
-  private static final Long DEFAULT_ALLOCATION_SIZE = 100L;
 
-  private final GemFireCache cache;
+  public static final String DEFAULT_SEQUENCE_REGION_PATH = "/IdSequences";
+  public static final Long DEFAULT_ALLOCATION_SIZE = 100L;
+
   private final String sequenceRegionPath;
   private final Long allocationSize;
   private final Map<String, LongIDAllocation> allocationsByName;
 
-  public LongIDGenerator(final Configuration config, final String sequenceRegionPath) {
-    this(config, sequenceRegionPath, DEFAULT_ALLOCATION_SIZE);
+  public static Long nextID(final String sequenceName) {
+    return new LongIDGenerator(DEFAULT_SEQUENCE_REGION_PATH, 1L).next(sequenceName);
   }
   
-  public LongIDGenerator(final Configuration config, final String sequenceRegionPath, final Long allocationSize) {
+  public static Long nextID(final String path, final String sequenceName) {
+    return new LongIDGenerator(DEFAULT_SEQUENCE_REGION_PATH, 1L).next(sequenceName);
+  }
+  
+  public LongIDGenerator() {
+    this(DEFAULT_SEQUENCE_REGION_PATH, DEFAULT_ALLOCATION_SIZE);
+  }
+  
+  public LongIDGenerator(final String sequenceRegionPath) {
+    this(sequenceRegionPath, DEFAULT_ALLOCATION_SIZE);
+  }
+  
+  public LongIDGenerator(final Long allocationSize) {
+    this(DEFAULT_SEQUENCE_REGION_PATH, allocationSize);
+  }
+  
+  public LongIDGenerator(final String sequenceRegionPath, final Long allocationSize) {
     super();
-    if (config == null)
-      throw new IllegalArgumentException("config is required");
-    this.cache = GemFireCacheProvider.getAnyInstance(config);
     if (Strings.isBlank(sequenceRegionPath))
       throw new IllegalArgumentException("sequenceRegionPath is required");
     this.sequenceRegionPath = sequenceRegionPath;
@@ -112,7 +125,7 @@ public class LongIDGenerator {
     Set<String> filter = new HashSet<String>();
     filter.add(sequenceName);
 
-    Region<String, LongSequence> region = cache.getRegion(sequenceRegionPath);
+    Region<String, LongSequence> region = cache().getRegion(sequenceRegionPath);
     ResultCollector<LongIDAllocation, List<LongIDAllocation>> rc = FunctionService
       .onRegion(region)
       .withFilter(filter)
@@ -121,5 +134,15 @@ public class LongIDGenerator {
 
     List<LongIDAllocation> result = (List<LongIDAllocation>) rc.getResult();
     return result.get(0);
+  }
+  
+  private GemFireCache cache() {
+    Optional<GemFireCache> cacheOrNull = GemFireCacheProvider.getAnyInstance();
+    if (cacheOrNull.isPresent()) {
+      return cacheOrNull.get();
+    }
+    else {
+      throw new RuntimeException("no GemFireCache has been created in this JVM");
+    }
   }
 }

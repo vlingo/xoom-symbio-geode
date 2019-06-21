@@ -12,6 +12,7 @@
 	<region name="Entity1" refid="PARTITION_REDUNDANT" />
 	<region name="Person" refid="PARTITION_REDUNDANT" />
 	<region name="TestSequences" refid="PARTITION_REDUNDANT" />
+	<region name="IdSequences" refid="REPLICATE" />
 	<function-service>
 		<function>
 			<class-name>io.vlingo.symbio.store.common.geode.identity.LongIDAllocator</class-name>

@@ -12,13 +12,7 @@ import static org.junit.Assert.assertNull;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Random;
-import java.util.Set;
+import java.util.*;
 
 import org.apache.geode.cache.GemFireCache;
 import org.apache.geode.cache.Region;
@@ -33,7 +27,6 @@ import io.vlingo.actors.Definition;
 import io.vlingo.actors.World;
 import io.vlingo.actors.testkit.AccessSafely;
 import io.vlingo.symbio.store.Result;
-import io.vlingo.symbio.store.common.geode.Configuration;
 import io.vlingo.symbio.store.common.geode.GemFireCacheProvider;
 import io.vlingo.symbio.store.object.ListQueryExpression;
 import io.vlingo.symbio.store.object.ObjectStore;
@@ -50,7 +43,6 @@ public class GeodeObjectStoreTest {
   
   private static ServerLauncher serverLauncher;
   private World world;
-  private Configuration configuration;
   private List<GeodePersistentObjectMapping> registeredMappings;
   private ObjectStore objectStore;
 
@@ -324,10 +316,9 @@ public class GeodeObjectStoreTest {
   @Before
   public void beforeEachTest() {
     world = World.startWithDefaults("test-world");
-    configuration = Configuration.define().forPeer();
     objectStore = world.actorFor(
       ObjectStore.class,
-      Definition.has(GeodeObjectStoreActor.class, Definition.parameters(configuration))
+      Definition.has(GeodeObjectStoreActor.class, Definition.NoParameters)
     );
     registeredMappings = new ArrayList<>();
   }
@@ -345,11 +336,12 @@ public class GeodeObjectStoreTest {
   }
   
   private void clearCache() {
-    //System.out.println("clearCache - entered");
-    GemFireCache cache = GemFireCacheProvider.getAnyInstance(configuration);
-    clearEntities(cache);
-    clearDispatchables(cache);
-    //System.out.println("clearCache - exited");
+    Optional<GemFireCache> cacheOrNull = GemFireCacheProvider.getAnyInstance();
+    if (cacheOrNull.isPresent()) {
+      GemFireCache cache = cacheOrNull.get();
+      clearEntities(cache);
+      clearDispatchables(cache);
+    }
   }
   
   private void clearEntities(GemFireCache cache) {
@@ -358,7 +350,6 @@ public class GeodeObjectStoreTest {
       if (region != null) {
         Set<?> keys = region.keySet();
         for (Object key : keys) {
-          //System.out.println("clearCache - removing key " + key + " with value " + region.get(key));
           region.remove(key);
         }
       }
@@ -366,7 +357,7 @@ public class GeodeObjectStoreTest {
   }
   
   private void clearDispatchables(GemFireCache cache) {
-    Region<?, ?> region = cache.getRegion(GeodeQueries.DISPATCHABLES_REGION_NAME);
+    Region<?, ?> region = cache.getRegion(GeodeQueries.DISPATCHABLES_REGION_PATH);
     if (region != null) {
       Set<?> keys = region.keySet();
       for (Object key : keys) {

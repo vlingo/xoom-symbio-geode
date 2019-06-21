@@ -6,20 +6,6 @@
 // one at https://mozilla.org/MPL/2.0/.
 package io.vlingo.symbio.store.state.geode;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-
-import org.apache.geode.cache.GemFireCache;
-import org.apache.geode.cache.Region;
-import org.apache.geode.distributed.ServerLauncher;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
-
 import io.vlingo.actors.Definition;
 import io.vlingo.actors.World;
 import io.vlingo.actors.testkit.AccessSafely;
@@ -30,16 +16,19 @@ import io.vlingo.symbio.State;
 import io.vlingo.symbio.State.ObjectState;
 import io.vlingo.symbio.StateAdapterProvider;
 import io.vlingo.symbio.store.Result;
-import io.vlingo.symbio.store.common.geode.Configuration;
 import io.vlingo.symbio.store.common.geode.GemFireCacheProvider;
+import io.vlingo.symbio.store.common.geode.pdx.MetadataPdxSerializer;
 import io.vlingo.symbio.store.common.geode.pdx.PdxSerializerRegistry;
-import io.vlingo.symbio.store.state.Entity1;
+import io.vlingo.symbio.store.state.*;
 import io.vlingo.symbio.store.state.Entity1.Entity1StateAdapter;
-import io.vlingo.symbio.store.state.MetadataPdxSerializer;
-import io.vlingo.symbio.store.state.MockObjectDispatcher;
-import io.vlingo.symbio.store.state.MockObjectResultInterest;
-import io.vlingo.symbio.store.state.StateStore;
-import io.vlingo.symbio.store.state.StateTypeStateStoreMap;
+import org.apache.geode.cache.GemFireCache;
+import org.apache.geode.cache.Region;
+import org.apache.geode.distributed.ServerLauncher;
+import org.junit.*;
+
+import java.util.Optional;
+
+import static org.junit.Assert.*;
 /**
  * GemFireStateStoreTest is responsible for testing {@link GeodeStateStoreActor}.
  */
@@ -47,7 +36,6 @@ public class GeodeStateStoreActorTest {
   private final static String StoreName = Entity1.class.getSimpleName();
 
   private static ServerLauncher serverLauncher;
-  private static Configuration configuration;
 
   private MockObjectDispatcher dispatcher;
   private MockObjectResultInterest interest;
@@ -315,8 +303,6 @@ public class GeodeStateStoreActorTest {
     interest = new MockObjectResultInterest();
     dispatcher = new MockObjectDispatcher(interest);
 
-    configuration = Configuration.define().forPeer();
-
     final String originatorId = "TEST";
     final long checkConfirmationExpirationInterval = 1000L;
     final long confirmationExpiration = 1000L;
@@ -329,7 +315,7 @@ public class GeodeStateStoreActorTest {
       StateStore.class,
       Definition.has(
         GeodeStateStoreActor.class,
-        Definition.parameters(originatorId, dispatcher, configuration, checkConfirmationExpirationInterval, confirmationExpiration)));
+        Definition.parameters(originatorId, dispatcher, checkConfirmationExpirationInterval, confirmationExpiration)));
 
     StateTypeStateStoreMap.stateTypeToStoreName(Entity1.class, StoreName);
   }
@@ -365,17 +351,20 @@ public class GeodeStateStoreActorTest {
 
   @SuppressWarnings("rawtypes")
   private void clearCache() {
-    GemFireCache cache = GemFireCacheProvider.getAnyInstance(configuration);
-    Region<String, ObjectState> region = cache.getRegion(StoreName);
-    if (region != null) {
-      for (String key : region.keySet()) {
-        region.remove(key);
+    Optional<GemFireCache> cacheOrNull = GemFireCacheProvider.getAnyInstance();
+    if (cacheOrNull.isPresent()) {
+      GemFireCache cache = cacheOrNull.get();
+      Region<String, ObjectState> region = cache.getRegion(StoreName);
+      if (region != null) {
+        for (String key : region.keySet()) {
+          region.remove(key);
+        }
       }
-    }
-    Region<String, ObjectState> dispatchablesRegion = cache.getRegion(GeodeQueries.DISPATCHABLES_REGION_NAME);
-    if (dispatchablesRegion != null) {
-      for (String key : dispatchablesRegion.keySet()) {
-        dispatchablesRegion.remove(key);
+      Region<String, ObjectState> dispatchablesRegion = cache.getRegion(GeodeQueries.DISPATCHABLES_REGION_PATH);
+      if (dispatchablesRegion != null) {
+        for (String key : dispatchablesRegion.keySet()) {
+          dispatchablesRegion.remove(key);
+        }
       }
     }
   }

@@ -11,20 +11,14 @@ import io.vlingo.actors.Definition;
 import io.vlingo.common.Completes;
 import io.vlingo.common.Failure;
 import io.vlingo.common.Success;
-import io.vlingo.symbio.Entry;
-import io.vlingo.symbio.EntryAdapterProvider;
-import io.vlingo.symbio.Metadata;
-import io.vlingo.symbio.Source;
-import io.vlingo.symbio.State;
+import io.vlingo.symbio.*;
 import io.vlingo.symbio.State.ObjectState;
-import io.vlingo.symbio.StateAdapterProvider;
 import io.vlingo.symbio.store.EntryReader;
 import io.vlingo.symbio.store.Result;
 import io.vlingo.symbio.store.StorageException;
-import io.vlingo.symbio.store.common.geode.Configuration;
 import io.vlingo.symbio.store.common.geode.GemFireCacheProvider;
 import io.vlingo.symbio.store.common.geode.pdx.PdxSerializerRegistry;
-import io.vlingo.symbio.store.state.GeodeDispatchableSerializer;
+import io.vlingo.symbio.store.common.geode.pdx.GeodeDispatchableSerializer;
 import io.vlingo.symbio.store.state.StateStore;
 import io.vlingo.symbio.store.state.StateStoreEntryReader;
 import io.vlingo.symbio.store.state.StateTypeStateStoreMap;
@@ -35,6 +29,7 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 /**
  * GeodeStateStoreActor is responsible for reading and writing
  * objects from/to a GemFire cache.
@@ -47,22 +42,19 @@ public class GeodeStateStoreActor extends Actor implements StateStore {
   private final String originatorId;
   private final Dispatcher dispatcher;
   private final DispatcherControl dispatcherControl;
-  private final GemFireCache cache;
-  private final Configuration configuration;
   private final Map<String,StateStoreEntryReader<?>> entryReaders;
   private final EntryAdapterProvider entryAdapterProvider;
   private final StateAdapterProvider stateAdapterProvider;
 
-  public GeodeStateStoreActor(final String originatorId, final Dispatcher dispatcher, final Configuration configuration) {
+  public GeodeStateStoreActor(final String originatorId, final Dispatcher dispatcher) {
     this(
       originatorId,
       dispatcher,
-      configuration,
       CHECK_CONFIRMATION_EXPIRATION_INTERVAL_DEFAULT,
       CONFIRMATION_EXPIRATION_DEFAULT);
   }
 
-  public GeodeStateStoreActor(final String originatorId, final Dispatcher dispatcher, final Configuration configuration, long checkConfirmationExpirationInterval, final long confirmationExpiration) {
+  public GeodeStateStoreActor(final String originatorId, final Dispatcher dispatcher, long checkConfirmationExpirationInterval, final long confirmationExpiration) {
 
     if (originatorId == null)
       throw new IllegalArgumentException("originatorId must not be null.");
@@ -71,12 +63,6 @@ public class GeodeStateStoreActor extends Actor implements StateStore {
     if (dispatcher == null)
       throw new IllegalArgumentException("dispatcher must not be null.");
     this.dispatcher = dispatcher;
-
-    if (configuration == null)
-      throw new IllegalArgumentException("configuration must not be null.");
-    this.cache = GemFireCacheProvider.getAnyInstance(configuration);
-
-    this.configuration = configuration;
 
     this.entryReaders = new HashMap<>();
 
@@ -87,7 +73,9 @@ public class GeodeStateStoreActor extends Actor implements StateStore {
 
     dispatcherControl = stage().actorFor(
       DispatcherControl.class,
-      Definition.has(GeodeDispatcherControlActor.class, Definition.parameters(originatorId, dispatcher, cache, checkConfirmationExpirationInterval, confirmationExpiration))
+      Definition.has(
+        GeodeDispatcherControlActor.class,
+        Definition.parameters(originatorId, dispatcher, checkConfirmationExpirationInterval, confirmationExpiration))
     );
 
     dispatcher.controlWith(dispatcherControl);
@@ -115,7 +103,7 @@ public class GeodeStateStoreActor extends Actor implements StateStore {
     StateStoreEntryReader<?> reader = entryReaders.get(name);
     if (reader == null) {
       final EntryReader.Advice advice =
-              new EntryReader.Advice(configuration, GeodeStateStoreEntryReaderActor.class,  null, null);
+              new EntryReader.Advice(null, GeodeStateStoreEntryReaderActor.class,  null, null);
       reader = childActorFor(StateStoreEntryReader.class, Definition.has(advice.entryReaderClass, Definition.parameters(advice, name)));
       entryReaders.put(name, reader);
     }
@@ -157,7 +145,7 @@ public class GeodeStateStoreActor extends Actor implements StateStore {
         return;
       }
 
-      final Region<Object, ObjectState<Object>> typeStore = cache.getRegion(storeName);
+      final Region<Object, ObjectState<Object>> typeStore = cache().getRegion(storeName);
       if (typeStore == null) {
         interest.readResultedIn(
           Failure.of(new StorageException(Result.NotFound, "Store not found: " + storeName)),
@@ -227,7 +215,7 @@ public class GeodeStateStoreActor extends Actor implements StateStore {
       return;
     }
 
-    Region<Object, State<Object>> typeStore = cache.getRegion(storeName);
+    Region<Object, State<Object>> typeStore = cache().getRegion(storeName);
     if (typeStore == null) {
       interest.writeResultedIn(
           Failure.of(new StorageException(Result.NoTypeStore, "Store not found: " + storeName)),
@@ -264,7 +252,7 @@ public class GeodeStateStoreActor extends Actor implements StateStore {
       final String dispatchId = storeName + ":" + id;
 
       Region<String, GeodeDispatchable<ObjectState<Object>>> dispatchablesRegion =
-        cache.getRegion(GeodeQueries.DISPATCHABLES_REGION_NAME);
+        cache().getRegion(GeodeQueries.DISPATCHABLES_REGION_PATH);
       dispatchablesRegion.put(dispatchId, new GeodeDispatchable<>(originatorId, LocalDateTime.now(), dispatchId, raw));
 
       dispatch(dispatchId, raw);
@@ -274,6 +262,16 @@ public class GeodeStateStoreActor extends Actor implements StateStore {
     catch (Exception e) {
       logger().error(getClass().getSimpleName() + " writeWith() error because: " + e.getMessage(), e);
       interest.writeResultedIn(Failure.of(new StorageException(Result.Error, e.getMessage(), e)), id, state, stateVersion, sources, object);
+    }
+  }
+
+  private GemFireCache cache() {
+    Optional<GemFireCache> cacheOrNull = GemFireCacheProvider.getAnyInstance();
+    if (cacheOrNull.isPresent()) {
+      return cacheOrNull.get();
+    }
+    else {
+      throw new RuntimeException("no GemFireCache has been created in this JVM");
     }
   }
 }
