@@ -7,6 +7,7 @@
 package io.vlingo.symbio.store.common.geode;
 
 import java.util.Optional;
+import java.util.Properties;
 
 import org.apache.geode.cache.Cache;
 import org.apache.geode.cache.CacheFactory;
@@ -18,6 +19,8 @@ import org.apache.geode.cache.client.ClientCacheFactory;
  * instance of {@link GemFireCache}.
  */
 public class GemFireCacheProvider {
+
+  private static final Properties DEFAULT_PROPERTIES = new Properties(System.getProperties());
 
   /**
    * Returns an {@link Optional} referencing the singleton
@@ -31,16 +34,18 @@ public class GemFireCacheProvider {
     try {
       cache = ClientCacheFactory.getAnyInstance();
     } catch (Throwable t) {
+      t.printStackTrace();
       try {
         cache = CacheFactory.getAnyInstance();
       }
       catch (Throwable t2) {
+        t2.printStackTrace();
         cache = null;
       }
     }
     return Optional.ofNullable(cache);
   }
-  
+
   /**
    * Returns the singleton {@link ClientCache} in this JVM or
    * attempts to create a new one. Throws {@link CouldNotAccessCacheException}
@@ -51,14 +56,31 @@ public class GemFireCacheProvider {
    * @return a {@link ClientCache}
    */
   public static ClientCache forClient() throws CouldNotAccessCacheException {
+    return forClient(DEFAULT_PROPERTIES);
+  }
+  /**
+   * Returns the singleton {@link ClientCache} in this JVM or
+   * attempts to create a new one. Throws {@link CouldNotAccessCacheException}
+   * if a server {@link Cache} was already created in this JVM
+   * or if the attempt to create a {@link ClientCache} fails
+   * for any reason.
+   *
+   * @param properties the possibly empty {@link Properties} with which
+   *                   to configure the cache
+   *
+   * @return a {@link ClientCache}
+   */
+  public static ClientCache forClient(final Properties properties) throws CouldNotAccessCacheException {
     ClientCache clientCache = null;
     try {
       clientCache = ClientCacheFactory.getAnyInstance();
     } catch (Throwable t) {
       try {
-        clientCache = new ClientCacheFactory().create();
+        clientCache = new ClientCacheFactory(properties).create();
       }
       catch (Throwable t2) {
+        t2.printStackTrace();
+        t2.printStackTrace();
         throw new CouldNotAccessCacheException("Unable to create or access existing ClientCache.", t2);
       }
     }
@@ -75,12 +97,28 @@ public class GemFireCacheProvider {
    * @return a {@link Cache}
    */
   public static Cache forPeer() throws CouldNotAccessCacheException {
+    return forPeer(DEFAULT_PROPERTIES);
+  }
+
+  /**
+   * Returns the singleton {@link Cache} in this JVM or attempts to
+   * create a new one. Throws {@link CouldNotAccessCacheException}
+   * if a {@link ClientCache} was already created in this JVM
+   * or if the attempt to create a {@link Cache} fails
+   * for any reason.
+   *
+   * @param properties the possibly empty {@link Properties} with which
+   *                   to configure the cache
+   *
+   * @return a {@link Cache}
+   */
+  public static Cache forPeer(Properties properties) throws CouldNotAccessCacheException {
     Cache serverCache = null;
     try {
       serverCache = CacheFactory.getAnyInstance();
     } catch (Throwable t) {
       try {
-        serverCache = new CacheFactory().create();
+        serverCache = new CacheFactory(properties).create();
       }
       catch (Throwable t2) {
         throw new CouldNotAccessCacheException("Unable to create or access existing Cache.", t2);
@@ -98,7 +136,7 @@ public class GemFireCacheProvider {
     }
 
     public CouldNotAccessCacheException(String message, Throwable cause, boolean enableSuppression,
-            boolean writableStackTrace) {
+                                        boolean writableStackTrace) {
       super(message, cause, enableSuppression, writableStackTrace);
     }
 
