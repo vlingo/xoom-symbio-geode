@@ -10,6 +10,7 @@ import io.vlingo.actors.Actor;
 import io.vlingo.common.Failure;
 import io.vlingo.common.Outcome;
 import io.vlingo.common.Success;
+import io.vlingo.symbio.Metadata;
 import io.vlingo.symbio.Source;
 import io.vlingo.symbio.store.Result;
 import io.vlingo.symbio.store.StorageException;
@@ -45,18 +46,19 @@ public class GeodeObjectStoreActor extends Actor implements ObjectStore {
     }
   }
 
+
   @Override
-  public <T extends PersistentObject, E> void persist(final T objectToPersist, final List<Source<E>> sources, final long updateId, final PersistResultInterest interest, final Object object) {
-    
+  public <T extends PersistentObject, E> void persist(final T objectToPersist, final List<Source<E>> sources, final Metadata metadata, final long updateId,
+          final PersistResultInterest interest, final Object object) {
     final PersistentObjectMapper mapper = mappers.get(objectToPersist.getClass());
     GeodePersistentObjectMapping mapping = mapper.persistMapper();
-    
+
     Region<Long, T> aggregateRegion = cache().getRegion(mapping.regionName);
     if (aggregateRegion == null) {
       interest.persistResultedIn(Failure.of(new StorageException(Result.NoTypeStore, "Region not configured: " + mapping.regionName)), objectToPersist, 1, 0, object);
       return;
     }
-    
+
     try {
       final T mutatedAggregate = objectToPersist;
       final T persistedAggregate = aggregateRegion.get(mutatedAggregate.persistenceId());
@@ -69,9 +71,9 @@ public class GeodeObjectStoreActor extends Actor implements ObjectStore {
       }
       mutatedAggregate.incrementVersion();
       aggregateRegion.put(mutatedAggregate.persistenceId(), mutatedAggregate);
-      
+
       //TODO: persist sources
-      
+
       interest.persistResultedIn(Success.of(Result.Success), objectToPersist, 1, 1, object);
     }
     catch (Exception ex) {
@@ -80,17 +82,17 @@ public class GeodeObjectStoreActor extends Actor implements ObjectStore {
   }
 
   @Override
-  public <T extends PersistentObject, E> void persistAll(final Collection<T> objectsToPersist, final List<Source<E>> sources, final long updateId, final PersistResultInterest interest, final Object object) {
-    
+  public <T extends PersistentObject, E> void persistAll(final Collection<T> objectsToPersist, final List<Source<E>> sources, final Metadata metadata,
+          final long updateId, final PersistResultInterest interest, final Object object) {
     try {
       String regionName = null;
       Region<Long, T> region = null;
       Map<Long, T> newEntries = new HashMap<>();
       for (T objectToPersist : objectsToPersist) {
-        
+
         final PersistentObjectMapper mapper = mappers.get(objectToPersist.getClass());
         GeodePersistentObjectMapping mapping = mapper.persistMapper();
-        
+
         if (region == null) {
           regionName = mapping.regionName;
           region = cache().getRegion(regionName);
@@ -106,14 +108,14 @@ public class GeodeObjectStoreActor extends Actor implements ObjectStore {
            * https://geode.apache.org/docs/guide/18/developing/transactions/design_considerations.html)
            */
           interest.persistResultedIn(
-            Failure.of(new StorageException(Result.Error, "persistAll requires that the collection of objects to be persisted must share the same single Geode Region")),
-            objectsToPersist,
-            objectsToPersist.size(),
-            0,
-            object);
+                  Failure.of(new StorageException(Result.Error, "persistAll requires that the collection of objects to be persisted must share the same single Geode Region")),
+                  objectsToPersist,
+                  objectsToPersist.size(),
+                  0,
+                  object);
           return;
         }
-        
+
         final T mutatedObject = objectToPersist;
         final T persistedObject = region.get(mutatedObject.persistenceId());
         if (persistedObject == null) {
@@ -124,15 +126,15 @@ public class GeodeObjectStoreActor extends Actor implements ObjectStore {
           final long mutatedObjectVersion = mutatedObject.version();
           if (persistedObjectVersion > mutatedObjectVersion) {
             interest.persistResultedIn(
-              Failure.of(new StorageException(
-                Result.ConcurrentyViolation,
-                "Version conflict for object with persistenceId " + mutatedObject.persistenceId() +
-                "; attempted to overwrite current entry with version " + persistedObjectVersion +
-                " with version " + mutatedObjectVersion)),
-              objectsToPersist,
-              objectsToPersist.size(),
-              0,
-              object);
+                    Failure.of(new StorageException(
+                            Result.ConcurrentyViolation,
+                            "Version conflict for object with persistenceId " + mutatedObject.persistenceId() +
+                                    "; attempted to overwrite current entry with version " + persistedObjectVersion +
+                                    " with version " + mutatedObjectVersion)),
+                    objectsToPersist,
+                    objectsToPersist.size(),
+                    0,
+                    object);
             return;
           }
           else {
@@ -140,19 +142,19 @@ public class GeodeObjectStoreActor extends Actor implements ObjectStore {
           }
         }
       }
-      
+
       newEntries.forEach((k,v) -> v.incrementVersion());
       region.putAll(newEntries);
-      
+
       //TODO: persist sources
-      
+
       interest.persistResultedIn(Success.of(Result.Success), objectsToPersist, objectsToPersist.size(), objectsToPersist.size(), object);
     }
     catch (Exception ex) {
       interest.persistResultedIn(Failure.of(new StorageException(Result.Failure, ex.getMessage(), ex)), objectsToPersist, objectsToPersist.size(), 0, object);
     }
   }
-  
+
   /* @see io.vlingo.symbio.store.object.ObjectStore#queryAll(io.vlingo.symbio.store.object.QueryExpression, io.vlingo.symbio.store.object.ObjectStore.QueryResultInterest, java.lang.Object) */
   @Override
   public void queryAll(final QueryExpression expression, final QueryResultInterest interest, final Object object) {

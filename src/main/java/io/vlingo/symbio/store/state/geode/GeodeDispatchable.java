@@ -7,19 +7,22 @@
 
 package io.vlingo.symbio.store.state.geode;
 
-import java.time.LocalDateTime;
-
+import io.vlingo.symbio.Entry;
 import io.vlingo.symbio.State;
-import io.vlingo.symbio.store.state.StateStore.Dispatchable;
+import io.vlingo.symbio.store.dispatch.Dispatchable;
+
+import java.time.LocalDateTime;
+import java.util.List;
+
 /**
  * GeodeDispatchable
  */
-public class GeodeDispatchable<R extends State<?>> extends Dispatchable<R> {
-  
+public class GeodeDispatchable<R extends State<?>> extends Dispatchable<Entry<?>,R> {
+
   public final String originatorId;
-  
-  public GeodeDispatchable(final String originatorId, final LocalDateTime createdAt, final String id, final R state) {
-    super(id, createdAt, state);
+
+  public GeodeDispatchable(final String originatorId, final LocalDateTime createdAt, final String id, final R state, final List<Entry<?>> entries) {
+    super(id, createdAt, state, entries);
     this.originatorId = originatorId;
   }
 
@@ -29,8 +32,8 @@ public class GeodeDispatchable<R extends State<?>> extends Dispatchable<R> {
     return new StringBuilder()
       .append("GeodeDispatchable(")
       .append("originatorId=").append(originatorId)
-      .append(", id=").append(id)
-      .append(", state=").append(state)
+      .append(", id=").append(id())
+      .append(", state=").append(state())
       .append(")")
       .toString();
   }

@@ -11,14 +11,22 @@ import io.vlingo.actors.Definition;
 import io.vlingo.common.Completes;
 import io.vlingo.common.Failure;
 import io.vlingo.common.Success;
-import io.vlingo.symbio.*;
+import io.vlingo.symbio.Entry;
+import io.vlingo.symbio.EntryAdapterProvider;
+import io.vlingo.symbio.Metadata;
+import io.vlingo.symbio.Source;
+import io.vlingo.symbio.State;
 import io.vlingo.symbio.State.ObjectState;
+import io.vlingo.symbio.StateAdapterProvider;
 import io.vlingo.symbio.store.EntryReader;
 import io.vlingo.symbio.store.Result;
 import io.vlingo.symbio.store.StorageException;
 import io.vlingo.symbio.store.common.geode.GemFireCacheProvider;
-import io.vlingo.symbio.store.common.geode.pdx.PdxSerializerRegistry;
 import io.vlingo.symbio.store.common.geode.pdx.GeodeDispatchableSerializer;
+import io.vlingo.symbio.store.common.geode.pdx.PdxSerializerRegistry;
+import io.vlingo.symbio.store.dispatch.Dispatcher;
+import io.vlingo.symbio.store.dispatch.DispatcherControl;
+import io.vlingo.symbio.store.dispatch.control.DispatcherControlActor;
 import io.vlingo.symbio.store.state.StateStore;
 import io.vlingo.symbio.store.state.StateStoreEntryReader;
 import io.vlingo.symbio.store.state.StateTypeStateStoreMap;
@@ -40,13 +48,13 @@ public class GeodeStateStoreActor extends Actor implements StateStore {
   public static final long CONFIRMATION_EXPIRATION_DEFAULT = 1000L;
 
   private final String originatorId;
-  private final Dispatcher dispatcher;
+  private final Dispatcher<GeodeDispatchable<ObjectState<Object>>> dispatcher;
   private final DispatcherControl dispatcherControl;
   private final Map<String,StateStoreEntryReader<?>> entryReaders;
   private final EntryAdapterProvider entryAdapterProvider;
   private final StateAdapterProvider stateAdapterProvider;
 
-  public GeodeStateStoreActor(final String originatorId, final Dispatcher dispatcher) {
+  public GeodeStateStoreActor(final String originatorId, final Dispatcher<GeodeDispatchable<ObjectState<Object>>> dispatcher) {
     this(
       originatorId,
       dispatcher,
@@ -54,7 +62,8 @@ public class GeodeStateStoreActor extends Actor implements StateStore {
       CONFIRMATION_EXPIRATION_DEFAULT);
   }
 
-  public GeodeStateStoreActor(final String originatorId, final Dispatcher dispatcher, long checkConfirmationExpirationInterval, final long confirmationExpiration) {
+  public GeodeStateStoreActor(final String originatorId, final Dispatcher<GeodeDispatchable<ObjectState<Object>>> dispatcher,
+          long checkConfirmationExpirationInterval, final long confirmationExpiration) {
 
     if (originatorId == null)
       throw new IllegalArgumentException("originatorId must not be null.");
@@ -70,16 +79,14 @@ public class GeodeStateStoreActor extends Actor implements StateStore {
     this.stateAdapterProvider = StateAdapterProvider.instance(stage().world());
 
     PdxSerializerRegistry.serializeTypeWith(GeodeDispatchable.class, GeodeDispatchableSerializer.class);
-
+    
+    final GeodeDispatcherControlDelegate controlDelegate = new GeodeDispatcherControlDelegate(originatorId);
     dispatcherControl = stage().actorFor(
       DispatcherControl.class,
       Definition.has(
-        GeodeDispatcherControlActor.class,
-        Definition.parameters(originatorId, dispatcher, checkConfirmationExpirationInterval, confirmationExpiration))
+        DispatcherControlActor.class,
+        Definition.parameters(dispatcher, controlDelegate, checkConfirmationExpirationInterval, confirmationExpiration))
     );
-
-    dispatcher.controlWith(dispatcherControl);
-    dispatcherControl.dispatchUnconfirmed();
   }
 
   @Override
@@ -90,8 +97,8 @@ public class GeodeStateStoreActor extends Actor implements StateStore {
     super.stop();
   }
 
-  protected void dispatch(final String dispatchId, final ObjectState<Object> state) {
-    dispatcher.dispatch(dispatchId, state);
+  protected void dispatch(final String dispatchId, final ObjectState<Object> state, final List<Entry<?>> entries) {
+    dispatcher.dispatch(new GeodeDispatchable<>(originatorId, LocalDateTime.now(), dispatchId, state, entries));
   }
 
   /*
@@ -232,7 +239,7 @@ public class GeodeStateStoreActor extends Actor implements StateStore {
       : stateAdapterProvider.asRaw(id, state, stateVersion, metadata);
 
     // TODO: Write sources
-    entryAdapterProvider.asEntries(sources); // final List<Entry<?>> entries =
+    final List<Entry<?>> entries = entryAdapterProvider.asEntries(sources, metadata);// final List<Entry<?>> entries =
 
     try {
       final State<Object> persistedState = typeStore.putIfAbsent(id, raw);
@@ -253,9 +260,9 @@ public class GeodeStateStoreActor extends Actor implements StateStore {
 
       Region<String, GeodeDispatchable<ObjectState<Object>>> dispatchablesRegion =
         cache().getRegion(GeodeQueries.DISPATCHABLES_REGION_PATH);
-      dispatchablesRegion.put(dispatchId, new GeodeDispatchable<>(originatorId, LocalDateTime.now(), dispatchId, raw));
+      dispatchablesRegion.put(dispatchId, new GeodeDispatchable<>(originatorId, LocalDateTime.now(), dispatchId, raw, entries));
 
-      dispatch(dispatchId, raw);
+      dispatch(dispatchId, raw, entries);
 
       interest.writeResultedIn(Success.of(Result.Success), id, state, stateVersion, sources, object);
     }
