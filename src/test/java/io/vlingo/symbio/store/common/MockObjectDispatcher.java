@@ -4,7 +4,7 @@
 // Mozilla Public License, v. 2.0. If a copy of the MPL
 // was not distributed with this file, You can obtain
 // one at https://mozilla.org/MPL/2.0/.
-package io.vlingo.symbio.store.state;
+package io.vlingo.symbio.store.common;
 
 import io.vlingo.actors.testkit.AccessSafely;
 import io.vlingo.symbio.Entry;
@@ -17,19 +17,17 @@ import io.vlingo.symbio.store.dispatch.DispatcherControl;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class MockObjectDispatcher implements Dispatcher<Dispatchable<Entry<?>, State<?>>> {
   private AccessSafely access;
 
-  public final ConfirmDispatchedResultInterest confirmDispatchedResultInterest;
-  public DispatcherControl control;
-  public final Map<String,Object> dispatched = new HashMap<>();
-  private final ConcurrentLinkedQueue<Entry<?>> dispatchedEntries = new ConcurrentLinkedQueue<>();
-  public final AtomicBoolean processDispatch = new AtomicBoolean(true);
-  public final AtomicInteger dispatchAttemptCount = new AtomicInteger(0);
+  private final ConfirmDispatchedResultInterest confirmDispatchedResultInterest;
+  private DispatcherControl control;
+  private final Map<String,Dispatchable<Entry<?>, State<?>>> dispatched = new HashMap<>();
+  private final AtomicBoolean processDispatch = new AtomicBoolean(true);
+  private final AtomicInteger dispatchAttemptCount = new AtomicInteger(0);
 
   public MockObjectDispatcher(final ConfirmDispatchedResultInterest confirmDispatchedResultInterest) {
     this.confirmDispatchedResultInterest = confirmDispatchedResultInterest;
@@ -45,25 +43,25 @@ public class MockObjectDispatcher implements Dispatcher<Dispatchable<Entry<?>, S
   public void dispatch(final Dispatchable<Entry<?>, State<?>> dispatchable) {
     dispatchAttemptCount.getAndIncrement();
     if (processDispatch.get()) {
-      access.writeUsing("dispatched", dispatchable.id(), new Dispatch<>(dispatchable.typedState(), dispatchable.entries()));
+      access.writeUsing("dispatched", dispatchable.id(), dispatchable);
       control.confirmDispatched(dispatchable.id(), confirmDispatchedResultInterest);
     }
   }
 
   @SuppressWarnings({ "rawtypes", "unchecked" })
   public AccessSafely afterCompleting(final int times) {
-    access = AccessSafely
+    this.access = AccessSafely
       .afterCompleting(times)
 
-      .writingWith("dispatched", (String id, Dispatch dispatch) -> { dispatched.put(id, dispatch.state); dispatchedEntries.addAll(dispatch.entries); })
+      .writingWith("dispatched", dispatched::put)
 
-      .readingWith("dispatchedState", (String id) -> dispatched.get(id))
-      .readingWith("dispatchedStateCount", () -> dispatched.size())
+      .readingWith("dispatchedState", (String id) -> dispatched.get(id).typedState())
+      .readingWith("dispatchedStateCount", dispatched::size)
 
-      .writingWith("processDispatch", (Boolean flag) -> processDispatch.set(flag))
-      .readingWith("processDispatch", () -> processDispatch.get())
+      .writingWith("processDispatch", processDispatch::set)
+      .readingWith("processDispatch", processDispatch::get)
 
-      .readingWith("dispatchAttemptCount", () -> dispatchAttemptCount.get())
+      .readingWith("dispatchAttemptCount", dispatchAttemptCount::get)
 
       .readingWith("dispatched", () -> dispatched);
 
@@ -72,6 +70,10 @@ public class MockObjectDispatcher implements Dispatcher<Dispatchable<Entry<?>, S
 
   public void dispatchUnconfirmed() {
     control.dispatchUnconfirmed();
+  }
+
+  public Map<String, Dispatchable<Entry<?>, State<?>>> getDispatched() {
+    return this.access.readFrom("dispatched");
   }
 
   private static class Dispatch<S extends State<?>,E extends Entry<?>> {

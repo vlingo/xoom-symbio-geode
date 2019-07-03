@@ -22,8 +22,9 @@ import io.vlingo.symbio.store.EntryReader;
 import io.vlingo.symbio.store.Result;
 import io.vlingo.symbio.store.StorageException;
 import io.vlingo.symbio.store.common.geode.GemFireCacheProvider;
-import io.vlingo.symbio.store.common.geode.pdx.GeodeDispatchableSerializer;
-import io.vlingo.symbio.store.common.geode.pdx.PdxSerializerRegistry;
+import io.vlingo.symbio.store.common.geode.GeodeQueries;
+import io.vlingo.symbio.store.common.geode.dispatch.GeodeDispatchable;
+import io.vlingo.symbio.store.common.geode.dispatch.GeodeDispatcherControlDelegate;
 import io.vlingo.symbio.store.dispatch.Dispatcher;
 import io.vlingo.symbio.store.dispatch.DispatcherControl;
 import io.vlingo.symbio.store.dispatch.control.DispatcherControlActor;
@@ -55,11 +56,10 @@ public class GeodeStateStoreActor extends Actor implements StateStore {
   private final StateAdapterProvider stateAdapterProvider;
 
   public GeodeStateStoreActor(final String originatorId, final Dispatcher<GeodeDispatchable<ObjectState<Object>>> dispatcher) {
-    this(
-      originatorId,
-      dispatcher,
-      CHECK_CONFIRMATION_EXPIRATION_INTERVAL_DEFAULT,
-      CONFIRMATION_EXPIRATION_DEFAULT);
+    this(originatorId,
+            dispatcher,
+            CHECK_CONFIRMATION_EXPIRATION_INTERVAL_DEFAULT,
+            CONFIRMATION_EXPIRATION_DEFAULT);
   }
 
   public GeodeStateStoreActor(final String originatorId, final Dispatcher<GeodeDispatchable<ObjectState<Object>>> dispatcher,
@@ -77,8 +77,6 @@ public class GeodeStateStoreActor extends Actor implements StateStore {
 
     this.entryAdapterProvider = EntryAdapterProvider.instance(stage().world());
     this.stateAdapterProvider = StateAdapterProvider.instance(stage().world());
-
-    PdxSerializerRegistry.serializeTypeWith(GeodeDispatchable.class, GeodeDispatchableSerializer.class);
     
     final GeodeDispatcherControlDelegate controlDelegate = new GeodeDispatcherControlDelegate(originatorId);
     dispatcherControl = stage().actorFor(

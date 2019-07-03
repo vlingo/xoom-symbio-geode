@@ -5,7 +5,7 @@
 // was not distributed with this file, You can obtain
 // one at https://mozilla.org/MPL/2.0/.
 
-package io.vlingo.symbio.store.state.geode;
+package io.vlingo.symbio.store.common.geode.dispatch;
 
 import io.vlingo.symbio.Entry;
 import io.vlingo.symbio.State;

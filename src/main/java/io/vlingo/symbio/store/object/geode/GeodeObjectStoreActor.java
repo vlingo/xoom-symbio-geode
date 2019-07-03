@@ -7,14 +7,25 @@
 package io.vlingo.symbio.store.object.geode;
 
 import io.vlingo.actors.Actor;
+import io.vlingo.actors.Definition;
 import io.vlingo.common.Failure;
 import io.vlingo.common.Outcome;
 import io.vlingo.common.Success;
+import io.vlingo.symbio.Entry;
+import io.vlingo.symbio.EntryAdapterProvider;
 import io.vlingo.symbio.Metadata;
 import io.vlingo.symbio.Source;
+import io.vlingo.symbio.State;
+import io.vlingo.symbio.StateAdapterProvider;
 import io.vlingo.symbio.store.Result;
 import io.vlingo.symbio.store.StorageException;
 import io.vlingo.symbio.store.common.geode.GemFireCacheProvider;
+import io.vlingo.symbio.store.common.geode.GeodeQueries;
+import io.vlingo.symbio.store.common.geode.dispatch.GeodeDispatchable;
+import io.vlingo.symbio.store.common.geode.dispatch.GeodeDispatcherControlDelegate;
+import io.vlingo.symbio.store.dispatch.Dispatcher;
+import io.vlingo.symbio.store.dispatch.DispatcherControl;
+import io.vlingo.symbio.store.dispatch.control.DispatcherControlActor;
 import io.vlingo.symbio.store.object.ObjectStore;
 import io.vlingo.symbio.store.object.PersistentObject;
 import io.vlingo.symbio.store.object.PersistentObjectMapper;
@@ -25,22 +36,63 @@ import org.apache.geode.cache.query.Query;
 import org.apache.geode.cache.query.QueryService;
 import org.apache.geode.cache.query.SelectResults;
 
-import java.util.*;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
 /**
  * GeodeObjectStoreActor is an {@link ObjectStore} that knows how to
  * read/write {@link PersistentObject} from/to Apache Geode.
  */
 public class GeodeObjectStoreActor extends Actor implements ObjectStore {
+  public static final long CHECK_CONFIRMATION_EXPIRATION_INTERVAL_DEFAULT = 1000L;
+  public static final long CONFIRMATION_EXPIRATION_DEFAULT = 1000L;
 
   private boolean closed;
-  private final Map<Class<?>,PersistentObjectMapper> mappers;
+  private final String originatorId;
 
-  public GeodeObjectStoreActor() {
+  private final Map<Class<?>,PersistentObjectMapper> mappers;
+  private final DispatcherControl dispatcherControl;
+  private final Dispatcher<GeodeDispatchable<State<?>>> dispatcher;
+  private final EntryAdapterProvider entryAdapterProvider;
+  private final StateAdapterProvider stateAdapterProvider;
+
+  public GeodeObjectStoreActor(final String originatorId, final Dispatcher<GeodeDispatchable<State<?>>> dispatcher) {
+    this(originatorId,
+         dispatcher,
+         CHECK_CONFIRMATION_EXPIRATION_INTERVAL_DEFAULT,
+         CONFIRMATION_EXPIRATION_DEFAULT);
+  }
+
+  public GeodeObjectStoreActor(final String originatorId, final Dispatcher<GeodeDispatchable<State<?>>> dispatcher,
+          long checkConfirmationExpirationInterval, final long confirmationExpiration) {
     this.mappers = new HashMap<>();
+    this.originatorId = originatorId;
+
+    this.entryAdapterProvider = EntryAdapterProvider.instance(stage().world());
+    this.stateAdapterProvider = StateAdapterProvider.instance(stage().world());
+    
+    final GeodeDispatcherControlDelegate controlDelegate = new GeodeDispatcherControlDelegate(originatorId);
+    this.dispatcher = dispatcher;
+    this.dispatcherControl = stage().actorFor(
+            DispatcherControl.class,
+            Definition.has(
+                    DispatcherControlActor.class,
+                    Definition.parameters(dispatcher, controlDelegate, checkConfirmationExpirationInterval, confirmationExpiration))
+    );
   }
 
   @Override
   public void close() {
+    if (dispatcherControl != null) {
+      dispatcherControl.stop();
+    }
     if (!closed) {
       closed = true;
     }
@@ -73,7 +125,10 @@ public class GeodeObjectStoreActor extends Actor implements ObjectStore {
       aggregateRegion.put(mutatedAggregate.persistenceId(), mutatedAggregate);
 
       //TODO: persist sources
-
+      final List<Entry<?>> entries = entryAdapterProvider.asEntries(sources, metadata);
+      final State<?> raw = stateAdapterProvider.asRaw(String.valueOf(objectToPersist.persistenceId()), objectToPersist, 1, metadata);
+      dispatch(raw, entries, cache());
+      
       interest.persistResultedIn(Success.of(Result.Success), objectToPersist, 1, 1, object);
     }
     catch (Exception ex) {
@@ -88,6 +143,7 @@ public class GeodeObjectStoreActor extends Actor implements ObjectStore {
       String regionName = null;
       Region<Long, T> region = null;
       Map<Long, T> newEntries = new HashMap<>();
+      final List<State<?>> states = new ArrayList<>(objectsToPersist.size());
       for (T objectToPersist : objectsToPersist) {
 
         final PersistentObjectMapper mapper = mappers.get(objectToPersist.getClass());
@@ -141,12 +197,20 @@ public class GeodeObjectStoreActor extends Actor implements ObjectStore {
             newEntries.put(mutatedObject.persistenceId(), mutatedObject);
           }
         }
+        
+        final State<?> raw = stateAdapterProvider.asRaw(String.valueOf(objectToPersist.persistenceId()), objectToPersist, 1, metadata);
+        states.add(raw);
       }
 
       newEntries.forEach((k,v) -> v.incrementVersion());
       region.putAll(newEntries);
 
       //TODO: persist sources
+      final List<Entry<?>> entries = entryAdapterProvider.asEntries(sources, metadata);
+      states.forEach(state -> {
+        //dispatch each persistent object
+        dispatch(state, entries, cache());
+      });
 
       interest.persistResultedIn(Success.of(Result.Success), objectsToPersist, objectsToPersist.size(), objectsToPersist.size(), object);
     }
@@ -264,4 +328,15 @@ public class GeodeObjectStoreActor extends Actor implements ObjectStore {
     }
   }
 
+  private void dispatch(final State<?> state, final List<Entry<?>> entries, final GemFireCache cache){
+    final String id = getDispatchId(state, entries);
+    final GeodeDispatchable<State<?>> geodeDispatchable = new GeodeDispatchable<>(originatorId, LocalDateTime.now(), id, state, entries);
+    Region<String, GeodeDispatchable<State<?>>> dispatchablesRegion = cache.getRegion(GeodeQueries.DISPATCHABLES_REGION_PATH);
+    dispatchablesRegion.put(id, geodeDispatchable);
+    this.dispatcher.dispatch(geodeDispatchable);
+  }
+
+  private static String getDispatchId(final State<?> raw, final List<Entry<?>> entries) {
+    return raw.id + ":" + entries.stream().map(Entry::id).collect(Collectors.joining(":"));
+  }
 }

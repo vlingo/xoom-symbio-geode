@@ -9,7 +9,7 @@ package io.vlingo.symbio.store.common.geode.pdx;
 
 import io.vlingo.symbio.Entry;
 import io.vlingo.symbio.State;
-import io.vlingo.symbio.store.state.geode.GeodeDispatchable;
+import io.vlingo.symbio.store.common.geode.dispatch.GeodeDispatchable;
 import org.apache.geode.cache.Declarable;
 import org.apache.geode.pdx.PdxReader;
 import org.apache.geode.pdx.PdxSerializer;

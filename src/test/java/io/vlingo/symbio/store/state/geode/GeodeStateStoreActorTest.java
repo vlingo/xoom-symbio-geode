@@ -16,19 +16,33 @@ import io.vlingo.symbio.State;
 import io.vlingo.symbio.State.ObjectState;
 import io.vlingo.symbio.StateAdapterProvider;
 import io.vlingo.symbio.store.Result;
+import io.vlingo.symbio.store.common.MockObjectDispatcher;
+import io.vlingo.symbio.store.common.event.TestEvent;
+import io.vlingo.symbio.store.common.event.TestEventAdapter;
 import io.vlingo.symbio.store.common.geode.GemFireCacheProvider;
+import io.vlingo.symbio.store.common.geode.GeodeQueries;
 import io.vlingo.symbio.store.common.geode.pdx.MetadataPdxSerializer;
 import io.vlingo.symbio.store.common.geode.pdx.PdxSerializerRegistry;
-import io.vlingo.symbio.store.state.*;
+import io.vlingo.symbio.store.state.Entity1;
 import io.vlingo.symbio.store.state.Entity1.Entity1StateAdapter;
+import io.vlingo.symbio.store.state.MockObjectResultInterest;
+import io.vlingo.symbio.store.state.StateStore;
+import io.vlingo.symbio.store.state.StateTypeStateStoreMap;
 import org.apache.geode.cache.GemFireCache;
 import org.apache.geode.cache.Region;
 import org.apache.geode.distributed.ServerLauncher;
-import org.junit.*;
+import org.junit.After;
+import org.junit.AfterClass;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
 import java.util.Optional;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 /**
  * GemFireStateStoreTest is responsible for testing {@link GeodeStateStoreActor}.
  */
@@ -42,7 +56,7 @@ public class GeodeStateStoreActorTest {
   private StateStore store;
   private TestWorld testWorld;
   private World world;
-  //private EntryAdapterProvider entryAdapterProvider;
+  private EntryAdapterProvider entryAdapterProvider;
   private StateAdapterProvider stateAdapterProvider;
 
   @Test
@@ -309,6 +323,8 @@ public class GeodeStateStoreActorTest {
 
     stateAdapterProvider = new StateAdapterProvider(world);
     stateAdapterProvider.registerAdapter(Entity1.class, new Entity1StateAdapter());
+    entryAdapterProvider = EntryAdapterProvider.instance(world);
+    entryAdapterProvider.registerAdapter(TestEvent.class, new TestEventAdapter());
     new EntryAdapterProvider(world); //entryAdapterProvider =
 
     store = world.actorFor(
