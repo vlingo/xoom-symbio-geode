@@ -17,6 +17,11 @@ import io.vlingo.symbio.store.state.StateStoreEntryReader;
 public class GeodeStateStoreEntryReaderActor<T extends Entry<?>> extends Actor implements StateStoreEntryReader<T> {
 
   @Override
+  public void close() {
+    // TODO Auto-generated method stub
+  }
+
+  @Override
   public Completes<String> name() {
     // TODO Auto-generated method stub
     return null;
