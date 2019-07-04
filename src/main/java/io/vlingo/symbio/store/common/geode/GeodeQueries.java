@@ -17,5 +17,5 @@ public interface GeodeQueries {
     "SELECT DISTINCT * FROM " +
     DISPATCHABLES_REGION_PATH +
     " WHERE originatorId = $1" +
-    " ORDER BY writtenAt ASC";
+    " ORDER BY createdAt ASC";
 }
