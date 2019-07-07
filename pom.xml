@@ -2,7 +2,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>io.vlingo</groupId>
   <artifactId>vlingo-symbio-geode</artifactId>
-  <version>0.8.4</version>
+  <version>0.8.5</version>
   <name>vlingo-symbio-geode</name>
   <description>Implementation of vlingo-symbio for Apache Geode</description>
   <url>https://github.com/vlingo/vlingo-symbio-geode</url>
@@ -35,7 +35,7 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <maven.compiler.source>1.8</maven.compiler.source>
     <maven.compiler.target>1.8</maven.compiler.target>
-    <geode.version>1.8.0</geode.version>
+    <geode.version>1.9.0</geode.version>
   </properties>
   <build>
     <plugins>
@@ -100,17 +100,17 @@
     <dependency>
       <groupId>io.vlingo</groupId>
       <artifactId>vlingo-common</artifactId>
-      <version>0.8.4</version>
+      <version>0.8.5</version>
     </dependency>
     <dependency>
       <groupId>io.vlingo</groupId>
       <artifactId>vlingo-actors</artifactId>
-      <version>0.8.4</version>
+      <version>0.8.5</version>
     </dependency>
     <dependency>
       <groupId>io.vlingo</groupId>
       <artifactId>vlingo-symbio</artifactId>
-      <version>0.8.4</version>
+      <version>0.8.5</version>
     </dependency>
     <dependency>
       <groupId>org.apache.geode</groupId>
