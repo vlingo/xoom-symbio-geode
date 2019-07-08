@@ -6,36 +6,57 @@
 // one at https://mozilla.org/MPL/2.0/.
 package io.vlingo.symbio.store.object.geode;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.*;
-
+import io.vlingo.actors.Definition;
+import io.vlingo.actors.World;
+import io.vlingo.actors.testkit.AccessSafely;
+import io.vlingo.symbio.Entry;
+import io.vlingo.symbio.EntryAdapterProvider;
+import io.vlingo.symbio.Source;
+import io.vlingo.symbio.State;
+import io.vlingo.symbio.store.Result;
+import io.vlingo.symbio.store.common.MockObjectDispatcher;
+import io.vlingo.symbio.store.common.event.Event;
+import io.vlingo.symbio.store.common.event.TestEvent;
+import io.vlingo.symbio.store.common.event.TestEventAdapter;
+import io.vlingo.symbio.store.common.geode.GemFireCacheProvider;
+import io.vlingo.symbio.store.common.geode.GeodeQueries;
+import io.vlingo.symbio.store.dispatch.Dispatchable;
+import io.vlingo.symbio.store.object.ListQueryExpression;
+import io.vlingo.symbio.store.object.ObjectStore;
+import io.vlingo.symbio.store.object.ObjectStoreReader.QueryMultiResults;
+import io.vlingo.symbio.store.object.ObjectStoreReader.QuerySingleResult;
+import io.vlingo.symbio.store.object.PersistentObject;
+import io.vlingo.symbio.store.object.PersistentObjectMapper;
+import io.vlingo.symbio.store.object.QueryExpression;
+import io.vlingo.symbio.store.state.MockObjectResultInterest;
 import org.apache.geode.cache.GemFireCache;
 import org.apache.geode.cache.Region;
 import org.apache.geode.distributed.ServerLauncher;
 import org.junit.After;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import io.vlingo.actors.Definition;
-import io.vlingo.actors.World;
-import io.vlingo.actors.testkit.AccessSafely;
-import io.vlingo.symbio.store.Result;
-import io.vlingo.symbio.store.common.geode.GemFireCacheProvider;
-import io.vlingo.symbio.store.object.ListQueryExpression;
-import io.vlingo.symbio.store.object.ObjectStore;
-import io.vlingo.symbio.store.object.ObjectStoreReader.QueryMultiResults;
-import io.vlingo.symbio.store.object.ObjectStoreReader.QuerySingleResult;
-import io.vlingo.symbio.store.object.PersistentObjectMapper;
-import io.vlingo.symbio.store.object.QueryExpression;
-import io.vlingo.symbio.store.object.PersistentObject;
-import io.vlingo.symbio.store.state.geode.GeodeQueries;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Random;
+import java.util.Set;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+
 /**
  * GeodeObjectStoreTest
  */
@@ -45,9 +66,12 @@ public class GeodeObjectStoreTest {
   private World world;
   private List<GeodePersistentObjectMapping> registeredMappings;
   private ObjectStore objectStore;
+  private MockObjectResultInterest interest;
+  private MockObjectDispatcher dispatcher;
 
   @Test
   public void testThatObjectStoreInsertsOneAndQueries() {
+    dispatcher.afterCompleting(1);
     final MockPersistResultInterest persistInterest = new MockPersistResultInterest();
     final AccessSafely persistAccess = persistInterest.afterCompleting(1);
     
@@ -59,7 +83,7 @@ public class GeodeObjectStoreTest {
     final long greenLanternId = 300L;
     final Person greenLantern = new Person("Green Lantern", 30, greenLanternId);
     assertEquals(0L, greenLantern.version());
-    objectStore.persist(greenLantern, persistInterest);
+    objectStore.persist(greenLantern, Collections.singletonList(TestEvent.randomEvent()),persistInterest);
     
     final Person storedgreenLantern = persistAccess.readFrom("persistedObject");
     assertEquals(Result.Success, persistAccess.readFrom("persistResult"));
@@ -82,10 +106,15 @@ public class GeodeObjectStoreTest {
     final QuerySingleResult querySingleResult = queryAccess.readFrom("singleResult");
     assertNotNull(querySingleResult);
     assertEquals(greenLantern, querySingleResult.persistentObject);
+
+    final Map<String, Dispatchable<Entry<?>, State<?>>> dispatched = dispatcher.getDispatched();
+    assertEquals(1, dispatched.size());
+
   }
   
   @Test
   public void testThatObjectStoreInsertsMultipleAndQueries() {
+    dispatcher.afterCompleting(3);
     final MockPersistResultInterest persistInterest = new MockPersistResultInterest();
     final AccessSafely persistAccess = persistInterest.afterCompleting(1);
     
@@ -124,6 +153,7 @@ public class GeodeObjectStoreTest {
   
   @Test
   public void testThatSingleEntityUpdates() {
+    dispatcher.afterCompleting(1);
     final MockPersistResultInterest persistInterest = new MockPersistResultInterest();
     final AccessSafely persistAccess = persistInterest.afterCompleting(1);
     
@@ -184,6 +214,7 @@ public class GeodeObjectStoreTest {
   
   @Test
   public void testThatMultipleEntitiesUpdate() {
+    dispatcher.afterCompleting(5);
     final MockPersistResultInterest persistInterest = new MockPersistResultInterest();
     final AccessSafely persistAccess = persistInterest.afterCompleting(1);
     
@@ -274,7 +305,57 @@ public class GeodeObjectStoreTest {
     assertEquals("queriedIronMan2.version", queriedIronMan1Version + 1, queriedIronMan2.version());
     assertEquals("queriedIronMan2.name", queriedIronMan2.name, ironMan2Name);
   }
-  
+
+  @Test
+  public void testRedispatch() {
+    final AccessSafely accessDispatcher = dispatcher.afterCompleting(5);
+
+    accessDispatcher.writeUsing("processDispatch", false);
+
+    final MockPersistResultInterest persistInterest = new MockPersistResultInterest();
+    final AccessSafely persistAccess = persistInterest.afterCompleting(1);
+
+    GeodePersistentObjectMapping personMapping = new GeodePersistentObjectMapping("Person");
+    registeredMappings.add(personMapping);
+    PersistentObjectMapper personMapper = PersistentObjectMapper.with(Person.class, personMapping, personMapping);
+    objectStore.registerMapper(personMapper);
+
+    /* insert */
+
+    final Person greenLantern1 = new Person("Green Lantern", 30, 300L);
+    final Person theWasp1 = new Person("The Wasp", 40, 400L);
+    final Person ironMan1 = new Person("Iron Man", 50, 500L);
+    
+    final List<Source<Event>> sources = Arrays.asList(TestEvent.randomEvent(), TestEvent.randomEvent());
+    objectStore.persistAll(Arrays.asList(greenLantern1, theWasp1, ironMan1), sources, persistInterest);
+
+    assertEquals(Result.Success, persistAccess.readFrom("persistResult"));
+    assertEquals(3, (int) persistAccess.readFrom("expectedPersistCount"));
+    assertEquals(3, (int) persistAccess.readFrom("actualPersistCount"));
+
+    try {
+      Thread.sleep(3000);
+    } catch (InterruptedException ex) {
+      //ignored
+    }
+
+    accessDispatcher.writeUsing("processDispatch", true);
+
+    final Map<String, Dispatchable<Entry<?>, State<?>>> dispatched = dispatcher.getDispatched();
+    assertEquals(3, dispatched.size());
+
+    final int dispatchAttemptCount = accessDispatcher.readFrom("dispatchAttemptCount");
+    assertTrue("dispatchAttemptCount", dispatchAttemptCount > 3);
+
+    for (final Dispatchable<Entry<?>, State<?>> dispatchable : dispatched.values()) {
+      Assert.assertNotNull(dispatchable.createdOn());
+      Assert.assertNotNull(dispatchable.id());
+      Assert.assertTrue(dispatchable.state().isPresent());
+      final Collection<Entry<?>> dispatchedEntries = dispatchable.entries();
+      Assert.assertEquals(sources.size(), dispatchedEntries.size());
+    }
+  }
+
   @BeforeClass
   public static void beforeAllTests() throws Exception {
     startGeode();
@@ -316,9 +397,16 @@ public class GeodeObjectStoreTest {
   @Before
   public void beforeEachTest() {
     world = World.startWithDefaults("test-world");
+    final String originatorId = "TEST";
+
+    EntryAdapterProvider.instance(world).registerAdapter(TestEvent.class, new TestEventAdapter());
+
+    interest = new MockObjectResultInterest();
+    dispatcher = new MockObjectDispatcher(interest);
     objectStore = world.actorFor(
       ObjectStore.class,
-      Definition.has(GeodeObjectStoreActor.class, Definition.NoParameters)
+      Definition.has(GeodeObjectStoreActor.class,
+              Definition.parameters(originatorId, dispatcher))
     );
     registeredMappings = new ArrayList<>();
   }

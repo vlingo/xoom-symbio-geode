@@ -4,7 +4,7 @@
 // Mozilla Public License, v. 2.0. If a copy of the MPL
 // was not distributed with this file, You can obtain
 // one at https://mozilla.org/MPL/2.0/.
-package io.vlingo.symbio.store.state.geode;
+package io.vlingo.symbio.store.common.geode;
 /**
  * GeodeQueries
  */
@@ -17,5 +17,5 @@ public interface GeodeQueries {
     "SELECT DISTINCT * FROM " +
     DISPATCHABLES_REGION_PATH +
     " WHERE originatorId = $1" +
-    " ORDER BY writtenAt ASC";
+    " ORDER BY createdAt ASC";
 }
