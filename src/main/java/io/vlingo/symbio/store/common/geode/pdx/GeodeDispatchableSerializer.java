@@ -7,6 +7,9 @@
 
 package io.vlingo.symbio.store.common.geode.pdx;
 
+import com.google.gson.reflect.TypeToken;
+import io.vlingo.common.serialization.JsonSerialization;
+import io.vlingo.symbio.BaseEntry;
 import io.vlingo.symbio.Entry;
 import io.vlingo.symbio.State;
 import io.vlingo.symbio.store.common.geode.dispatch.GeodeDispatchable;
@@ -16,8 +19,6 @@ import org.apache.geode.pdx.PdxSerializer;
 import org.apache.geode.pdx.PdxWriter;
 
 import java.time.LocalDateTime;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 
 /**
@@ -33,23 +34,11 @@ public class GeodeDispatchableSerializer implements PdxSerializer, Declarable {
   /* @see org.apache.geode.pdx.PdxSerializer#fromData(java.lang.Class, org.apache.geode.pdx.PdxReader) */
   @Override
   public Object fromData(Class<?> clazz, PdxReader in) {
-    String originatorId = in.readString("originatorId");
-    LocalDateTime createdAt = (LocalDateTime) in.readObject("createdAt");
-    String id = in.readString("id");
-    State<?> state;
-    if (in.hasField("state")) {
-      state = (State<?>) in.readObject("state");
-    } else {
-      state = null;
-    }
-
-    final List<Entry<?>> entryList;
-    if (in.hasField("entries")) {
-      final Entry<?>[] entries = (Entry<?>[]) in.readObjectArray("entries");
-      entryList = Arrays.asList(entries);
-    } else {
-      entryList = Collections.emptyList();
-    }
+    final String originatorId = in.readString("originatorId");
+    final LocalDateTime createdAt = (LocalDateTime) in.readObject("createdAt");
+    final String id = in.readString("id");
+    final State<?> state = JsonSerialization.deserialized(in.readString("state"), new TypeToken<State.ObjectState<?>>(){}.getType());
+    final List<Entry<?>> entryList = JsonSerialization.deserialized(in.readString("entries"), new TypeToken<List<BaseEntry.ObjectEntry>>(){}.getType());
     return new GeodeDispatchable<State<?>>(originatorId, createdAt, id, state, entryList);
   }
 
@@ -63,15 +52,10 @@ public class GeodeDispatchableSerializer implements PdxSerializer, Declarable {
       out
         .writeString("originatorId", instance.originatorId)
         .writeObject("createdAt", instance.createdOn())
-        .writeString("id", instance.id());
-
-      if (instance.state().isPresent()){
-        out.writeObject("state", instance.state().get());
-      }
-
-      if (instance.entries()!=null && !instance.entries().isEmpty()){
-        out.writeObjectArray("entries", instance.entries().toArray(new Entry[0]));
-      }
+        .writeString("id", instance.id())
+        .markIdentityField("id")
+        .writeString("state", JsonSerialization.serialized(instance.state()))
+        .writeString("entries", JsonSerialization.serialized(instance.entries()));
       result = true;
     }
     return result;
