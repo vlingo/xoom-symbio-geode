@@ -30,16 +30,29 @@ public class GemFireCacheProvider {
    * @return a {@link GemFireCache} or null
    */
   public static Optional<GemFireCache> getAnyInstance() {
+    return getAnyInstance(DEFAULT_PROPERTIES);
+  }
+
+  /**
+   * Returns an {@link Optional} referencing the singleton
+   * {@link GemFireCache} existing in this JVM or null if
+   * no cache has been created yet.
+   *
+   * @param properties the possibly empty {@link Properties} with which
+   *                   to configure the cache
+   *
+   * @return a {@link GemFireCache} or null
+   */
+  public static Optional<GemFireCache> getAnyInstance(final Properties properties) {
     GemFireCache cache = null;
     try {
-      cache = ClientCacheFactory.getAnyInstance();
-    } catch (Throwable t) {
-      t.printStackTrace();
+      cache = forClient(properties);
+    }
+    catch (Throwable t) {
       try {
-        cache = CacheFactory.getAnyInstance();
+        cache = forPeer(properties);
       }
       catch (Throwable t2) {
-        t2.printStackTrace();
         cache = null;
       }
     }
@@ -74,13 +87,12 @@ public class GemFireCacheProvider {
     ClientCache clientCache = null;
     try {
       clientCache = ClientCacheFactory.getAnyInstance();
-    } catch (Throwable t) {
+    }
+    catch (Throwable t) {
       try {
         clientCache = new ClientCacheFactory(properties).create();
       }
       catch (Throwable t2) {
-        t2.printStackTrace();
-        t2.printStackTrace();
         throw new CouldNotAccessCacheException("Unable to create or access existing ClientCache.", t2);
       }
     }
@@ -116,7 +128,8 @@ public class GemFireCacheProvider {
     Cache serverCache = null;
     try {
       serverCache = CacheFactory.getAnyInstance();
-    } catch (Throwable t) {
+    }
+    catch (Throwable t) {
       try {
         serverCache = new CacheFactory(properties).create();
       }
