@@ -244,7 +244,7 @@ public class GeodeStateStoreActor extends Actor implements StateStore {
       if (persistedState != null) {
         if (persistedState.dataVersion >= raw.dataVersion) {
           interest.writeResultedIn(
-            Failure.of(new StorageException(Result.ConcurrentyViolation, "Version conflict.")),
+            Failure.of(new StorageException(Result.ConcurrencyViolation, "Version conflict.")),
             id,
             state,
             stateVersion,
