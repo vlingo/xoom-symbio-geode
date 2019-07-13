@@ -111,7 +111,7 @@ public class GeodeObjectStoreActor extends Actor implements ObjectStore {
         final long persistedAggregateVersion = persistedAggregate.version();
         final long mutatedAggregateVersion = mutatedAggregate.version();
         if (persistedAggregateVersion > mutatedAggregateVersion) {
-          interest.persistResultedIn(Failure.of(new StorageException(Result.ConcurrentyViolation, "Version conflict.")), objectToPersist, 1, 0, object);
+          interest.persistResultedIn(Failure.of(new StorageException(Result.ConcurrencyViolation, "Version conflict.")), objectToPersist, 1, 0, object);
         }
       }
       mutatedAggregate.incrementVersion();
@@ -178,7 +178,7 @@ public class GeodeObjectStoreActor extends Actor implements ObjectStore {
           if (persistedObjectVersion > mutatedObjectVersion) {
             interest.persistResultedIn(
                     Failure.of(new StorageException(
-                            Result.ConcurrentyViolation,
+                            Result.ConcurrencyViolation,
                             "Version conflict for object with persistenceId " + mutatedObject.persistenceId() +
                                     "; attempted to overwrite current entry with version " + persistedObjectVersion +
                                     " with version " + mutatedObjectVersion)),
@@ -300,7 +300,7 @@ public class GeodeObjectStoreActor extends Actor implements ObjectStore {
         final long persistedObjectVersion = persistedObject.version();
         final long mutatedObjectVersion = mutatedObject.version();
         if (persistedObjectVersion > mutatedObjectVersion) {
-          return Failure.of(new StorageException(Result.ConcurrentyViolation, "Version conflict."));
+          return Failure.of(new StorageException(Result.ConcurrencyViolation, "Version conflict."));
         }
         else {
           mutatedObject.incrementVersion();

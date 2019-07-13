@@ -183,8 +183,8 @@ public class GeodeStateStoreActorIT {
     store.write(entity.id, entity, 3, interest);
 
     assertEquals(3, (int) access2.readFrom("objectWriteAccumulatedResultsCount"));
-    assertEquals(Result.ConcurrentyViolation, access2.readFrom("objectWriteAccumulatedResults"));
-    assertEquals(Result.ConcurrentyViolation, access2.readFrom("objectWriteAccumulatedResults"));
+    assertEquals(Result.ConcurrencyViolation, access2.readFrom("objectWriteAccumulatedResults"));
+    assertEquals(Result.ConcurrencyViolation, access2.readFrom("objectWriteAccumulatedResults"));
     assertEquals(Result.Success, access2.readFrom("objectWriteAccumulatedResults"));
   }
 
