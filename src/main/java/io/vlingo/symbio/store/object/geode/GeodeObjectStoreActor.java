@@ -8,15 +8,12 @@ package io.vlingo.symbio.store.object.geode;
 
 import io.vlingo.actors.Actor;
 import io.vlingo.actors.Definition;
+import io.vlingo.actors.Logger;
 import io.vlingo.common.Failure;
 import io.vlingo.common.Outcome;
 import io.vlingo.common.Success;
-import io.vlingo.symbio.Entry;
-import io.vlingo.symbio.EntryAdapterProvider;
-import io.vlingo.symbio.Metadata;
-import io.vlingo.symbio.Source;
-import io.vlingo.symbio.State;
-import io.vlingo.symbio.StateAdapterProvider;
+import io.vlingo.common.serialization.JsonSerialization;
+import io.vlingo.symbio.*;
 import io.vlingo.symbio.store.Result;
 import io.vlingo.symbio.store.StorageException;
 import io.vlingo.symbio.store.common.geode.GemFireCacheProvider;
@@ -37,13 +34,7 @@ import org.apache.geode.cache.query.QueryService;
 import org.apache.geode.cache.query.SelectResults;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -51,6 +42,8 @@ import java.util.stream.Collectors;
  * read/write {@link PersistentObject} from/to Apache Geode.
  */
 public class GeodeObjectStoreActor extends Actor implements ObjectStore {
+
+  private static final Logger LOG = Logger.basicLogger();
   public static final long CHECK_CONFIRMATION_EXPIRATION_INTERVAL_DEFAULT = 1000L;
   public static final long CONFIRMATION_EXPIRATION_DEFAULT = 1000L;
 
@@ -122,6 +115,7 @@ public class GeodeObjectStoreActor extends Actor implements ObjectStore {
         }
       }
       mutatedAggregate.incrementVersion();
+      LOG.info("persist - put: " + mutatedAggregate);
       aggregateRegion.put(mutatedAggregate.persistenceId(), mutatedAggregate);
 
       //TODO: persist sources
@@ -132,6 +126,7 @@ public class GeodeObjectStoreActor extends Actor implements ObjectStore {
       interest.persistResultedIn(Success.of(Result.Success), objectToPersist, 1, 1, object);
     }
     catch (Exception ex) {
+      LOG.error("error persisting " + JsonSerialization.serialized(objectToPersist), ex);
       interest.persistResultedIn(Failure.of(new StorageException(Result.Failure, ex.getMessage(), ex)), objectToPersist, 1, 0, object);
     }
   }
@@ -203,6 +198,7 @@ public class GeodeObjectStoreActor extends Actor implements ObjectStore {
       }
 
       newEntries.forEach((k,v) -> v.incrementVersion());
+      LOG.info("persist - putAll: " + Arrays.toString(newEntries.values().toArray()));
       region.putAll(newEntries);
 
       //TODO: persist sources

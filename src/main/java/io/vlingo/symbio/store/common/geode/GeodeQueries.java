@@ -10,12 +10,17 @@ package io.vlingo.symbio.store.common.geode;
  */
 public interface GeodeQueries {
   
-  static final String DISPATCHABLES_REGION_PATH = "/vlingo-dispatchables";
+  String DISPATCHABLES_REGION_PATH = "/vlingo-dispatchables";
   
-  static final String OQL_DISPATCHABLES_SELECT =
+  String OQL_DISPATCHABLES_SELECT =
     //"<trace> " +
     "SELECT DISTINCT * FROM " +
     DISPATCHABLES_REGION_PATH +
     " WHERE originatorId = $1" +
-    " ORDER BY createdAt ASC";
+    " ORDER BY createdOn ASC";
+
+  String ALL_UNCONFIRMED_DISPATCHABLES_SELECT =
+    "SELECT DISTINCT * FROM " +
+    DISPATCHABLES_REGION_PATH  +
+    " ORDER BY createdOn ASC";
 }

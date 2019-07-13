@@ -6,35 +6,49 @@
 // one at https://mozilla.org/MPL/2.0/.
 package io.vlingo.symbio.store.object.geode;
 
-import static org.junit.Assert.assertEquals;
-
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.Set;
-
-import org.apache.geode.cache.GemFireCache;
-import org.apache.geode.cache.Region;
-import org.apache.geode.distributed.ServerLauncher;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
-
 import io.vlingo.actors.Definition;
 import io.vlingo.actors.World;
+import io.vlingo.symbio.store.common.geode.ClearRegionFunction;
 import io.vlingo.symbio.store.common.geode.GemFireCacheProvider;
 import io.vlingo.symbio.store.common.geode.identity.IDGenerator;
 import io.vlingo.symbio.store.common.geode.identity.LongIDGenerator;
 import io.vlingo.symbio.store.common.geode.identity.LongIDGeneratorActor;
 import io.vlingo.symbio.store.common.geode.identity.LongSequence;
+import org.apache.geode.cache.GemFireCache;
+import org.apache.geode.cache.Region;
+import org.apache.geode.cache.execute.FunctionService;
+import org.junit.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.testcontainers.containers.DockerComposeContainer;
+import org.testcontainers.containers.output.Slf4jLogConsumer;
+import org.testcontainers.containers.wait.strategy.Wait;
+
+import java.io.File;
+import java.net.InetAddress;
+import java.util.Optional;
+
+import static org.junit.Assert.assertEquals;
 /**
- * LongIDGeneratorTest
+ * LongIDGeneratorIT
  */
-public class LongIDGeneratorTest {
-  
-  private static ServerLauncher serverLauncher;
-  private static GemFireCache cache;
+public class LongIDGeneratorIT {
+
+  private static final Logger LOG = LoggerFactory.getLogger(LongIDGeneratorIT.class);
+
+  @ClassRule
+  public static DockerComposeContainer environment =
+    new DockerComposeContainer(new File("docker/docker-compose.yml"))
+      .withEnv("HOST_IP", hostIP())
+      .withEnv("USER_DIR", System.getProperty("user.dir"))
+      .withLogConsumer("locator", new Slf4jLogConsumer(LOG))
+      .withExposedService("server1", 40404)
+      .withLogConsumer("server1", new Slf4jLogConsumer(LOG))
+      .waitingFor("server1", Wait.forLogMessage(".*is currently online.*", 1))
+      .withExposedService("server2", 40405)
+      .withLogConsumer("server2", new Slf4jLogConsumer(LOG))
+      .waitingFor("server2", Wait.forLogMessage(".*is currently online.*", 1));
+
   private World world;
   
   @Test
@@ -77,31 +91,10 @@ public class LongIDGeneratorTest {
     assertEquals("next product ID is 3", new Long(3), generator.next(productSeq).await());
   }
   
-  @BeforeClass
-  public static void beforeAllTests() throws Exception {
-    System.setProperty("gemfire.Query.VERBOSE","true");
-    Path tempDir = Files.createTempDirectory("longIDGeneratorTest");
-    serverLauncher = new ServerLauncher.Builder()
-      .setWorkingDirectory(tempDir.toString())
-      .build();
-    serverLauncher.start();
-    cache = GemFireCacheProvider.forPeer();
-  }
-  
-  @AfterClass
-  public static void afterAllTests() {
-    if (cache == null) {
-      cache.close();
-      cache = null;
-    }
-    if (serverLauncher != null) {
-      serverLauncher.stop();
-      serverLauncher = null;
-    }
-  }
-  
   @Before
   public void beforeEachTest() {
+    System.setProperty("HOST_IP", hostIP());
+    System.setProperty("gemfire.Query.VERBOSE","true");
     world = World.startWithDefaults("test-world");
   }
   
@@ -109,20 +102,34 @@ public class LongIDGeneratorTest {
   public void afterEachTest() {
     destroyWorld();
     clearCache();
+    GemFireCacheProvider.forClient().close();
   }
   
-  protected void destroyWorld() {
+  private void destroyWorld() {
     world.terminate();
     world = null;
   }
   
   private void clearCache() {
-    Region<String, LongSequence> region = cache.getRegion(LongIDGenerator.DEFAULT_SEQUENCE_REGION_PATH);
-    if (region != null) {
-      Set<?> keys = region.keySet();
-      for (Object key : keys) {
-        region.remove(key);
+    Optional<GemFireCache> cacheOrNull = GemFireCacheProvider.getAnyInstance();
+    if (cacheOrNull.isPresent()) {
+      GemFireCache cache = cacheOrNull.get();
+      Region<String, LongSequence> region = cache.getRegion(LongIDGenerator.DEFAULT_SEQUENCE_REGION_PATH);
+      if (region != null) {
+        FunctionService
+          .onRegion(region)
+          .execute(ClearRegionFunction.class.getSimpleName());
       }
+    }
+  }
+
+  private static String hostIP() {
+    try {
+      return InetAddress.getLocalHost().getHostAddress();
+    }
+    catch (Throwable t) {
+      LOG.error("error looking up host IP address; defaulting to loopback", t);
+      return InetAddress.getLoopbackAddress().getHostAddress();
     }
   }
 }

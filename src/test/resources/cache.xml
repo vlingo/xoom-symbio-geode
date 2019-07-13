@@ -1,21 +1,19 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<cache xmlns="http://geode.apache.org/schema/cache"
-	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="http://geode.apache.org/schema/cache http://geode.apache.org/schema/cache/cache-1.0.xsd"
-	version="1.0">
+<client-cache
+		xmlns="http://geode.apache.org/schema/cache"
+		xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+		xsi:schemaLocation="http://geode.apache.org/schema/cache http://geode.apache.org/schema/cache/cache-1.0.xsd"
+		version="1.0">
+	<pool name="serverPool" >
+		<locator host="${HOST_IP}" port="10334"/>
+	</pool>
 	<pdx>
 		<pdx-serializer>
 			<class-name>io.vlingo.symbio.store.common.geode.pdx.DynaPdxSerializer</class-name>
 		</pdx-serializer>
 	</pdx>
-	<region name="vlingo-dispatchables" refid="PARTITION_REDUNDANT" />
-	<region name="Entity1" refid="PARTITION_REDUNDANT" />
-	<region name="Person" refid="PARTITION_REDUNDANT" />
-	<region name="TestSequences" refid="PARTITION_REDUNDANT" />
-	<region name="IdSequences" refid="REPLICATE" />
-	<function-service>
-		<function>
-			<class-name>io.vlingo.symbio.store.common.geode.identity.LongIDAllocator</class-name>
-		</function>
-	</function-service>
-</cache>
+	<region name="vlingo-dispatchables" refid="PROXY" />
+	<region name="Entity1" refid="PROXY" />
+	<region name="Person" refid="PROXY" />
+	<region name="IdSequences" refid="PROXY" />
+</client-cache>

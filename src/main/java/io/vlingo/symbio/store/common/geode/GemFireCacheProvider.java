@@ -9,6 +9,7 @@ package io.vlingo.symbio.store.common.geode;
 import java.util.Optional;
 import java.util.Properties;
 
+import io.vlingo.actors.Logger;
 import org.apache.geode.cache.Cache;
 import org.apache.geode.cache.CacheFactory;
 import org.apache.geode.cache.GemFireCache;
@@ -21,6 +22,7 @@ import org.apache.geode.cache.client.ClientCacheFactory;
 public class GemFireCacheProvider {
 
   private static final Properties DEFAULT_PROPERTIES = new Properties(System.getProperties());
+  private static final Logger LOG = Logger.basicLogger();
 
   /**
    * Returns an {@link Optional} referencing the singleton
@@ -87,10 +89,12 @@ public class GemFireCacheProvider {
     ClientCache clientCache = null;
     try {
       clientCache = ClientCacheFactory.getAnyInstance();
+      LOG.trace("returning EXISTING ClientCache");
     }
     catch (Throwable t) {
       try {
         clientCache = new ClientCacheFactory(properties).create();
+        LOG.trace("returning NEW ClientCache");
       }
       catch (Throwable t2) {
         throw new CouldNotAccessCacheException("Unable to create or access existing ClientCache.", t2);
@@ -128,10 +132,12 @@ public class GemFireCacheProvider {
     Cache serverCache = null;
     try {
       serverCache = CacheFactory.getAnyInstance();
+      LOG.trace("returning EXISTING server Cache");
     }
     catch (Throwable t) {
       try {
         serverCache = new CacheFactory(properties).create();
+        LOG.trace("returning NEW server Cache");
       }
       catch (Throwable t2) {
         throw new CouldNotAccessCacheException("Unable to create or access existing Cache.", t2);

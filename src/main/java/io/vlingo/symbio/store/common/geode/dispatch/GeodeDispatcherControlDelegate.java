@@ -31,7 +31,7 @@ import java.util.Optional;
  * GeodeDispatcherControlDelegate is responsible for implementing functions required by {@code DispatcherControl} actor.
  */
 public class GeodeDispatcherControlDelegate implements DispatcherControl.DispatcherControlDelegate<Entry<?>, ObjectState<Object>> {
-  
+
   private final String originatorId;
   private Query allUnconfirmedDispatchablesQuery;
   
@@ -44,7 +44,7 @@ public class GeodeDispatcherControlDelegate implements DispatcherControl.Dispatc
   private Query allUnconfirmedDispatchablesQuery() {
     if (allUnconfirmedDispatchablesQuery == null) {
       QueryService queryService = cache().getQueryService();
-      allUnconfirmedDispatchablesQuery = queryService.newQuery(GeodeQueries.OQL_DISPATCHABLES_SELECT);
+      allUnconfirmedDispatchablesQuery = queryService.newQuery(GeodeQueries.ALL_UNCONFIRMED_DISPATCHABLES_SELECT);
     }
     return allUnconfirmedDispatchablesQuery;
   }

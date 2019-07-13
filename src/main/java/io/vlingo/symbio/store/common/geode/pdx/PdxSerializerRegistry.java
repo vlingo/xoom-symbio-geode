@@ -12,6 +12,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.apache.geode.pdx.PdxSerializationException;
 import org.apache.geode.pdx.PdxSerializer;
 import org.apache.geode.pdx.ReflectionBasedAutoSerializer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /**
  * PdxSerializerRegistry is responsible for maintaining a registry of
  * {@link PdxSerializer} on a domain-type basis, and for vending
@@ -19,11 +22,13 @@ import org.apache.geode.pdx.ReflectionBasedAutoSerializer;
  * fully-qualified class name.
  */
 public class PdxSerializerRegistry {
-  
+
+  private static final Logger LOG = LoggerFactory.getLogger(PdxSerializerRegistry.class);
   private static final Map<String, String> SerializerClassByType = new ConcurrentHashMap<>();
 
   public static void serializeTypeWith(final String typeFQCN, final String serializerFQCN) {
     SerializerClassByType.putIfAbsent(typeFQCN, serializerFQCN);
+    LOG.info(typeFQCN + " will be serialized by " + serializerFQCN);
   }
 
   public static void serializeTypeWith(final Class<?> type, final Class<?> pdxSerializerClass) {
