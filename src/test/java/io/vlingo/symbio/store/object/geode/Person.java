@@ -12,7 +12,6 @@ import io.vlingo.symbio.store.object.PersistentObject;
 public class Person extends PersistentObject {
   private static final long serialVersionUID = 1L;
 
-  public final long id;
   public final int age;
   public final String name;
 
@@ -20,22 +19,20 @@ public class Person extends PersistentObject {
     super(persistenceId);
     this.name = name;
     this.age = age;
-    this.id = persistenceId;
   }
   
-  protected Person(final String name, final int age, final long persistenceId, final long version) {
+  public Person(final String name, final int age, final long persistenceId, final long version) {
     super(persistenceId, version);
     this.name = name;
     this.age = age;
-    this.id = persistenceId;
   }
   
   public Person withAge(final int age) {
-    return new Person(name, age, id, version());
+    return new Person(name, age, persistenceId(), version());
   }
 
   public Person withName(final String name) {
-    return new Person(name, age, id, version());
+    return new Person(name, age, persistenceId(), version());
   }
 
   @Override
@@ -62,7 +59,6 @@ public class Person extends PersistentObject {
       .append("persistenceId=").append(persistenceId())
       .append(", version=").append(version())
       .append(", age=").append(age)
-      .append(", id=").append(id)
       .append(", name=").append(name)
       .append(")")
       .toString();

@@ -13,12 +13,17 @@ import org.apache.geode.cache.Declarable;
 import org.apache.geode.pdx.PdxReader;
 import org.apache.geode.pdx.PdxSerializer;
 import org.apache.geode.pdx.PdxWriter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /**
  * DynaPdxSerializer is a {@link PdxSerializer} that delegates to an
  * appropriate kind of {@link PdxSerializer}, as determined by the
  * configuration held in {@link PdxSerializerRegistry}.
  */
 public class DynaPdxSerializer implements PdxSerializer, Declarable {
+
+  private static final Logger LOG = LoggerFactory.getLogger(DynaPdxSerializer.class);
   
   private Map<String, PdxSerializer> serializersByType = new ConcurrentHashMap<>();
   
@@ -48,7 +53,7 @@ public class DynaPdxSerializer implements PdxSerializer, Declarable {
     if (serializer == null) {
       serializer = PdxSerializerRegistry.serializerForType(fqcn);
       serializersByType.put(fqcn, serializer);
-      System.out.println(fqcn + " will be serialized by " + serializer);
+      LOG.info(fqcn + " will be serialized by " + serializer);
     }
     return serializer;
   }

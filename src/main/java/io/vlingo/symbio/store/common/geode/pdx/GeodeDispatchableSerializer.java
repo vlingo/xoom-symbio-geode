@@ -8,6 +8,7 @@
 package io.vlingo.symbio.store.common.geode.pdx;
 
 import com.google.gson.reflect.TypeToken;
+import io.vlingo.actors.Logger;
 import io.vlingo.common.serialization.JsonSerialization;
 import io.vlingo.symbio.BaseEntry;
 import io.vlingo.symbio.Entry;
@@ -20,12 +21,15 @@ import org.apache.geode.pdx.PdxWriter;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * GeodeDispatchableSerializer is responsible for serializing instances of
  * {@link GeodeDispatchable}.
  */
 public class GeodeDispatchableSerializer implements PdxSerializer, Declarable {
+
+  private static final Logger LOG = Logger.basicLogger();
 
   public GeodeDispatchableSerializer() {
     super();
@@ -34,31 +38,48 @@ public class GeodeDispatchableSerializer implements PdxSerializer, Declarable {
   /* @see org.apache.geode.pdx.PdxSerializer#fromData(java.lang.Class, org.apache.geode.pdx.PdxReader) */
   @Override
   public Object fromData(Class<?> clazz, PdxReader in) {
-    final String originatorId = in.readString("originatorId");
-    final LocalDateTime createdAt = (LocalDateTime) in.readObject("createdAt");
-    final String id = in.readString("id");
-    final State<?> state = JsonSerialization.deserialized(in.readString("state"), new TypeToken<State.ObjectState<?>>(){}.getType());
-    final List<Entry<?>> entryList = JsonSerialization.deserialized(in.readString("entries"), new TypeToken<List<BaseEntry.ObjectEntry>>(){}.getType());
-    return new GeodeDispatchable<State<?>>(originatorId, createdAt, id, state, entryList);
+    try {
+      final String originatorId = in.readString("originatorId");
+      final LocalDateTime createdAt = (LocalDateTime) in.readObject("createdAt");
+      final String id = in.readString("id");
+      final State<?> state = JsonSerialization.deserialized(
+              in.readString("state"),
+              new TypeToken<State.ObjectState<?>>() {}.getType());
+      final List<Entry<?>> entryList = JsonSerialization.deserialized(
+              in.readString("entries"),
+              new TypeToken<List<BaseEntry.ObjectEntry>>() {}.getType());
+      return new GeodeDispatchable<State<?>>(originatorId, createdAt, id, state, entryList);
+    }
+    catch (Throwable t) {
+      LOG.error("error deserializing pdx instance", t);
+      throw new RuntimeException("error deserializing pdx instance of GeodeDispatchable", t);
+    }
   }
 
   /* @see org.apache.geode.pdx.PdxSerializer#toData(java.lang.Object, org.apache.geode.pdx.PdxWriter) */
   @SuppressWarnings("rawtypes")
   @Override
   public boolean toData(Object o, PdxWriter out) {
-    boolean result = false;
-    if (o instanceof GeodeDispatchable) {
-      GeodeDispatchable<State<?>> instance = (GeodeDispatchable<State<?>>) o;
-      out
-        .writeString("originatorId", instance.originatorId)
-        .writeObject("createdAt", instance.createdOn())
-        .writeString("id", instance.id())
-        .markIdentityField("id")
-        .writeString("state", JsonSerialization.serialized(instance.state()))
-        .writeString("entries", JsonSerialization.serialized(instance.entries()));
-      result = true;
+    try {
+      boolean result = false;
+      if (o instanceof GeodeDispatchable) {
+        GeodeDispatchable<State<?>> instance = (GeodeDispatchable<State<?>>) o;
+        out
+                .writeString("originatorId", instance.originatorId)
+                .writeObject("createdAt", instance.createdOn())
+                .writeString("id", instance.id())
+                .markIdentityField("id");
+        Optional<?> state = instance.state();
+        out.writeString("state", JsonSerialization.serialized(state.isPresent() ? state.get() : null));
+        out.writeString("entries", JsonSerialization.serialized(instance.entries()));
+        result = true;
+      }
+      return result;
     }
-    return result;
+    catch (Throwable t) {
+      LOG.error("error serializing pdx instance", t);
+      throw new RuntimeException("error serializing pdx instance of GeodeDispatchable", t);
+    }
   }
 
 }

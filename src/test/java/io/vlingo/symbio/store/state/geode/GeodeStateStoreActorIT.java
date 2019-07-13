@@ -19,10 +19,9 @@ import io.vlingo.symbio.store.Result;
 import io.vlingo.symbio.store.common.MockObjectDispatcher;
 import io.vlingo.symbio.store.common.event.TestEvent;
 import io.vlingo.symbio.store.common.event.TestEventAdapter;
+import io.vlingo.symbio.store.common.geode.ClearRegionFunction;
 import io.vlingo.symbio.store.common.geode.GemFireCacheProvider;
 import io.vlingo.symbio.store.common.geode.GeodeQueries;
-import io.vlingo.symbio.store.common.geode.pdx.MetadataPdxSerializer;
-import io.vlingo.symbio.store.common.geode.pdx.PdxSerializerRegistry;
 import io.vlingo.symbio.store.state.Entity1;
 import io.vlingo.symbio.store.state.Entity1.Entity1StateAdapter;
 import io.vlingo.symbio.store.state.MockObjectResultInterest;
@@ -30,26 +29,41 @@ import io.vlingo.symbio.store.state.StateStore;
 import io.vlingo.symbio.store.state.StateTypeStateStoreMap;
 import org.apache.geode.cache.GemFireCache;
 import org.apache.geode.cache.Region;
-import org.apache.geode.distributed.ServerLauncher;
+import org.apache.geode.cache.execute.FunctionService;
 import org.junit.After;
-import org.junit.AfterClass;
 import org.junit.Before;
-import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.testcontainers.containers.DockerComposeContainer;
+import org.testcontainers.containers.output.Slf4jLogConsumer;
+import org.testcontainers.containers.wait.strategy.Wait;
 
+import java.io.File;
+import java.net.InetAddress;
 import java.util.Optional;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 /**
  * GemFireStateStoreTest is responsible for testing {@link GeodeStateStoreActor}.
  */
-public class GeodeStateStoreActorTest {
+public class GeodeStateStoreActorIT {
+  private static final Logger LOG = LoggerFactory.getLogger(GeodeStateStoreActorIT.class);
   private final static String StoreName = Entity1.class.getSimpleName();
 
-  private static ServerLauncher serverLauncher;
+  @ClassRule
+  public static DockerComposeContainer environment =
+    new DockerComposeContainer(new File("docker/docker-compose.yml"))
+      .withEnv("HOST_IP", hostIP())
+      .withEnv("USER_DIR", System.getProperty("user.dir"))
+      .withLogConsumer("locator", new Slf4jLogConsumer(LOG))
+      .withExposedService("server1", 40404)
+      .withLogConsumer("server1", new Slf4jLogConsumer(LOG))
+      .waitingFor("server1", Wait.forLogMessage(".*is currently online.*", 1))
+      .withExposedService("server2", 40405)
+      .withLogConsumer("server2", new Slf4jLogConsumer(LOG))
+      .waitingFor("server2", Wait.forLogMessage(".*is currently online.*", 1));
 
   private MockObjectDispatcher dispatcher;
   private MockObjectResultInterest interest;
@@ -290,27 +304,10 @@ public class GeodeStateStoreActorTest {
     assertTrue("dispatchAttemptCount", dispatchAttemptCount > 3);
 }
 
-  @BeforeClass
-  public static void beforeAllTests() {
-    startGeode();
-  }
-
-  protected static void startGeode() {
-    System.out.println("startGeode - entered");
-    try {
-      PdxSerializerRegistry.serializeTypeWith(Metadata.class, MetadataPdxSerializer.class);
-      serverLauncher = new ServerLauncher.Builder()
-        .setWorkingDirectory(System.getProperty("user.dir") + "/target")
-        .build();
-      serverLauncher.start();
-      System.out.println("started cache server '" + serverLauncher.getMemberName() + "'");
-    } finally {
-      System.out.println("startGeode - exited");
-    }
-  }
-
   @Before
   public void beforeEachTest() {
+    System.setProperty("HOST_IP", hostIP());
+
     testWorld = TestWorld.startWithDefaults("test-store");
     world = testWorld.world();
 
@@ -336,30 +333,14 @@ public class GeodeStateStoreActorTest {
     StateTypeStateStoreMap.stateTypeToStoreName(Entity1.class, StoreName);
   }
 
-  @AfterClass
-  public static void afterAllTests() {
-    stopGeode();
-  }
-
-  public static void stopGeode() {
-    System.out.println("stopGeode - entered");
-    try {
-      if (serverLauncher != null) {
-        serverLauncher.stop();
-        serverLauncher = null;
-      }
-    } finally {
-      System.out.println("stopGeode - exited");
-    }
-  }
-
   @After
   public void afterEachTest() {
     destroyWorld();
     clearCache();
+    GemFireCacheProvider.forClient().close();
   }
 
-  protected void destroyWorld() {
+  private void destroyWorld() {
     world.terminate();
     world = null;
     store = null;
@@ -370,22 +351,32 @@ public class GeodeStateStoreActorTest {
     Optional<GemFireCache> cacheOrNull = GemFireCacheProvider.getAnyInstance();
     if (cacheOrNull.isPresent()) {
       GemFireCache cache = cacheOrNull.get();
-      Region<String, ObjectState> region = cache.getRegion(StoreName);
-      if (region != null) {
-        for (String key : region.keySet()) {
-          region.remove(key);
-        }
+      Region<String, ObjectState> storeRegion = cache.getRegion(StoreName);
+      if (storeRegion != null) {
+        FunctionService
+          .onRegion(storeRegion)
+          .execute(ClearRegionFunction.class.getSimpleName());
       }
       Region<String, ObjectState> dispatchablesRegion = cache.getRegion(GeodeQueries.DISPATCHABLES_REGION_PATH);
       if (dispatchablesRegion != null) {
-        for (String key : dispatchablesRegion.keySet()) {
-          dispatchablesRegion.remove(key);
-        }
+        FunctionService
+            .onRegion(dispatchablesRegion)
+            .execute(ClearRegionFunction.class.getSimpleName());
       }
     }
   }
 
   private String dispatchId(final String entityId) {
     return StoreName + ":" + entityId;
+  }
+
+  private static String hostIP() {
+    try {
+      return InetAddress.getLocalHost().getHostAddress();
+    }
+    catch (Throwable t) {
+      LOG.error("error looking up host IP address; defaulting to loopback", t);
+      return InetAddress.getLoopbackAddress().getHostAddress();
+    }
   }
 }
