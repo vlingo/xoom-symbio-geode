@@ -6,37 +6,6 @@
 // one at https://mozilla.org/MPL/2.0/.
 package io.vlingo.symbio.store.object.geode;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-
-import java.io.File;
-import java.net.InetAddress;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Random;
-
-import org.apache.geode.cache.GemFireCache;
-import org.apache.geode.cache.Region;
-import org.apache.geode.cache.execute.FunctionService;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.testcontainers.containers.DockerComposeContainer;
-import org.testcontainers.containers.output.Slf4jLogConsumer;
-import org.testcontainers.containers.wait.strategy.Wait;
-
 import io.vlingo.actors.Definition;
 import io.vlingo.actors.World;
 import io.vlingo.actors.testkit.AccessSafely;
@@ -44,6 +13,7 @@ import io.vlingo.symbio.Entry;
 import io.vlingo.symbio.EntryAdapterProvider;
 import io.vlingo.symbio.Source;
 import io.vlingo.symbio.State;
+import io.vlingo.symbio.StateAdapterProvider;
 import io.vlingo.symbio.store.Result;
 import io.vlingo.symbio.store.common.MockObjectDispatcher;
 import io.vlingo.symbio.store.common.event.Event;
@@ -63,6 +33,36 @@ import io.vlingo.symbio.store.object.PersistentObject;
 import io.vlingo.symbio.store.object.PersistentObjectMapper;
 import io.vlingo.symbio.store.object.QueryExpression;
 import io.vlingo.symbio.store.state.MockObjectResultInterest;
+import org.apache.geode.cache.GemFireCache;
+import org.apache.geode.cache.Region;
+import org.apache.geode.cache.execute.FunctionService;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.ClassRule;
+import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.testcontainers.containers.DockerComposeContainer;
+import org.testcontainers.containers.output.Slf4jLogConsumer;
+import org.testcontainers.containers.wait.strategy.Wait;
+
+import java.io.File;
+import java.net.InetAddress;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Random;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 /**
  * GeodeObjectStoreIT implements
  */
@@ -90,6 +90,7 @@ public class GeodeObjectStoreIT {
   private ObjectStore objectStore;
   private MockObjectResultInterest interest;
   private MockObjectDispatcher dispatcher;
+  private GeodeObjectStoreDelegate storeDelegate;
 
   @Test
   public void testThatObjectStoreInsertsOneAndQueries() {
@@ -100,7 +101,7 @@ public class GeodeObjectStoreIT {
     GeodePersistentObjectMapping personMapping = new GeodePersistentObjectMapping(PERSON_REGION_PATH);
     registeredMappings.add(personMapping);
     PersistentObjectMapper personMapper = PersistentObjectMapper.with(Person.class, personMapping, personMapping);
-    objectStore.registerMapper(personMapper);
+    storeDelegate.registerMapper(personMapper);
 
     final long greenLanternId = 300L;
     final Person greenLantern = new Person("Green Lantern", 30, greenLanternId);
@@ -142,7 +143,7 @@ public class GeodeObjectStoreIT {
     GeodePersistentObjectMapping personMapping = new GeodePersistentObjectMapping(PERSON_REGION_PATH);
     registeredMappings.add(personMapping);
     PersistentObjectMapper personMapper = PersistentObjectMapper.with(Person.class, personMapping, personMapping);
-    objectStore.registerMapper(personMapper);
+    storeDelegate.registerMapper(personMapper);
 
     final Person greenLantern = new Person("Green Lantern", 30, 301L);
     final Person theWasp = new Person("The Wasp", 40, 401L);
@@ -181,7 +182,7 @@ public class GeodeObjectStoreIT {
     GeodePersistentObjectMapping personMapping = new GeodePersistentObjectMapping(PERSON_REGION_PATH);
     registeredMappings.add(personMapping);
     PersistentObjectMapper personMapper = PersistentObjectMapper.with(Person.class, personMapping, personMapping);
-    objectStore.registerMapper(personMapper);
+    storeDelegate.registerMapper(personMapper);
 
     final long greenLanternId = 302L;
     final Person greenLantern = new Person("Green Lantern", 30, greenLanternId);
@@ -244,7 +245,7 @@ public class GeodeObjectStoreIT {
     GeodePersistentObjectMapping personMapping = new GeodePersistentObjectMapping(PERSON_REGION_PATH);
     registeredMappings.add(personMapping);
     PersistentObjectMapper personMapper = PersistentObjectMapper.with(Person.class, personMapping, personMapping);
-    objectStore.registerMapper(personMapper);
+    storeDelegate.registerMapper(personMapper);
 
     /* insert */
 
@@ -341,7 +342,7 @@ public class GeodeObjectStoreIT {
     GeodePersistentObjectMapping personMapping = new GeodePersistentObjectMapping(PERSON_REGION_PATH);
     registeredMappings.add(personMapping);
     PersistentObjectMapper personMapper = PersistentObjectMapper.with(Person.class, personMapping, personMapping);
-    objectStore.registerMapper(personMapper);
+    storeDelegate.registerMapper(personMapper);
 
     /* insert */
 
@@ -389,13 +390,14 @@ public class GeodeObjectStoreIT {
     final String originatorId = "TEST";
 
     EntryAdapterProvider.instance(world).registerAdapter(TestEvent.class, new TestEventAdapter());
-
+    final StateAdapterProvider stateAdapterProvider = StateAdapterProvider.instance(world);
     interest = new MockObjectResultInterest();
     dispatcher = new MockObjectDispatcher(interest);
+    storeDelegate = new GeodeObjectStoreDelegate(originatorId, stateAdapterProvider, world.defaultLogger());
     objectStore = world.actorFor(
             ObjectStore.class,
             Definition.has(GeodeObjectStoreActor.class,
-                    Definition.parameters(originatorId, dispatcher))
+                    Definition.parameters(originatorId, storeDelegate, dispatcher))
     );
     registeredMappings = new ArrayList<>();
   }
@@ -412,6 +414,7 @@ public class GeodeObjectStoreIT {
     world.terminate();
     world = null;
     objectStore = null;
+    storeDelegate.close();
   }
 
   private void clearCache() {
