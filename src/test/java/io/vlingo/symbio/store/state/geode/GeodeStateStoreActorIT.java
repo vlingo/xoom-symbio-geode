@@ -6,6 +6,28 @@
 // one at https://mozilla.org/MPL/2.0/.
 package io.vlingo.symbio.store.state.geode;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+
+import java.io.File;
+import java.net.InetAddress;
+import java.util.Optional;
+
+import org.apache.geode.cache.GemFireCache;
+import org.apache.geode.cache.Region;
+import org.apache.geode.cache.execute.FunctionService;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.ClassRule;
+import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.testcontainers.containers.DockerComposeContainer;
+import org.testcontainers.containers.output.Slf4jLogConsumer;
+import org.testcontainers.containers.wait.strategy.Wait;
+
 import io.vlingo.actors.Definition;
 import io.vlingo.actors.World;
 import io.vlingo.actors.testkit.AccessSafely;
@@ -27,27 +49,10 @@ import io.vlingo.symbio.store.state.Entity1.Entity1StateAdapter;
 import io.vlingo.symbio.store.state.MockObjectResultInterest;
 import io.vlingo.symbio.store.state.StateStore;
 import io.vlingo.symbio.store.state.StateTypeStateStoreMap;
-import org.apache.geode.cache.GemFireCache;
-import org.apache.geode.cache.Region;
-import org.apache.geode.cache.execute.FunctionService;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.testcontainers.containers.DockerComposeContainer;
-import org.testcontainers.containers.output.Slf4jLogConsumer;
-import org.testcontainers.containers.wait.strategy.Wait;
-
-import java.io.File;
-import java.net.InetAddress;
-import java.util.Optional;
-
-import static org.junit.Assert.*;
 /**
  * GemFireStateStoreTest is responsible for testing {@link GeodeStateStoreActor}.
  */
+@SuppressWarnings({"unchecked", "rawtypes"})
 public class GeodeStateStoreActorIT {
   private static final Logger LOG = LoggerFactory.getLogger(GeodeStateStoreActorIT.class);
   private final static String StoreName = Entity1.class.getSimpleName();
@@ -302,7 +307,7 @@ public class GeodeStateStoreActorIT {
 
     int dispatchAttemptCount = accessDispatcher.readFrom("dispatchAttemptCount");
     assertTrue("dispatchAttemptCount", dispatchAttemptCount > 3);
-}
+  }
 
   @Before
   public void beforeEachTest() {
@@ -346,7 +351,6 @@ public class GeodeStateStoreActorIT {
     store = null;
   }
 
-  @SuppressWarnings("rawtypes")
   private void clearCache() {
     Optional<GemFireCache> cacheOrNull = GemFireCacheProvider.getAnyInstance();
     if (cacheOrNull.isPresent()) {

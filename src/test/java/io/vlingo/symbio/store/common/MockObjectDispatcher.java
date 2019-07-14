@@ -6,6 +6,12 @@
 // one at https://mozilla.org/MPL/2.0/.
 package io.vlingo.symbio.store.common;
 
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+
 import io.vlingo.actors.testkit.AccessSafely;
 import io.vlingo.symbio.Entry;
 import io.vlingo.symbio.State;
@@ -13,12 +19,6 @@ import io.vlingo.symbio.store.dispatch.ConfirmDispatchedResultInterest;
 import io.vlingo.symbio.store.dispatch.Dispatchable;
 import io.vlingo.symbio.store.dispatch.Dispatcher;
 import io.vlingo.symbio.store.dispatch.DispatcherControl;
-
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 
 public class MockObjectDispatcher implements Dispatcher<Dispatchable<Entry<?>, State<?>>> {
   private AccessSafely access;
@@ -48,7 +48,6 @@ public class MockObjectDispatcher implements Dispatcher<Dispatchable<Entry<?>, S
     }
   }
 
-  @SuppressWarnings({ "rawtypes", "unchecked" })
   public AccessSafely afterCompleting(final int times) {
     this.access = AccessSafely
       .afterCompleting(times)
@@ -76,6 +75,7 @@ public class MockObjectDispatcher implements Dispatcher<Dispatchable<Entry<?>, S
     return this.access.readFrom("dispatched");
   }
 
+  @SuppressWarnings("unused")
   private static class Dispatch<S extends State<?>,E extends Entry<?>> {
     final Collection<E> entries;
     final S state;

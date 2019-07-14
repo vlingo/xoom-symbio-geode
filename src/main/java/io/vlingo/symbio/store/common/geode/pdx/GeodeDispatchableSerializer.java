@@ -7,21 +7,23 @@
 
 package io.vlingo.symbio.store.common.geode.pdx;
 
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Optional;
+
+import org.apache.geode.cache.Declarable;
+import org.apache.geode.pdx.PdxReader;
+import org.apache.geode.pdx.PdxSerializer;
+import org.apache.geode.pdx.PdxWriter;
+
 import com.google.gson.reflect.TypeToken;
+
 import io.vlingo.actors.Logger;
 import io.vlingo.common.serialization.JsonSerialization;
 import io.vlingo.symbio.BaseEntry;
 import io.vlingo.symbio.Entry;
 import io.vlingo.symbio.State;
 import io.vlingo.symbio.store.common.geode.dispatch.GeodeDispatchable;
-import org.apache.geode.cache.Declarable;
-import org.apache.geode.pdx.PdxReader;
-import org.apache.geode.pdx.PdxSerializer;
-import org.apache.geode.pdx.PdxWriter;
-
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Optional;
 
 /**
  * GeodeDispatchableSerializer is responsible for serializing instances of
@@ -37,6 +39,7 @@ public class GeodeDispatchableSerializer implements PdxSerializer, Declarable {
 
   /* @see org.apache.geode.pdx.PdxSerializer#fromData(java.lang.Class, org.apache.geode.pdx.PdxReader) */
   @Override
+  @SuppressWarnings("rawtypes")
   public Object fromData(Class<?> clazz, PdxReader in) {
     try {
       final String originatorId = in.readString("originatorId");
@@ -57,7 +60,7 @@ public class GeodeDispatchableSerializer implements PdxSerializer, Declarable {
   }
 
   /* @see org.apache.geode.pdx.PdxSerializer#toData(java.lang.Object, org.apache.geode.pdx.PdxWriter) */
-  @SuppressWarnings("rawtypes")
+  @SuppressWarnings("unchecked")
   @Override
   public boolean toData(Object o, PdxWriter out) {
     try {

@@ -6,6 +6,37 @@
 // one at https://mozilla.org/MPL/2.0/.
 package io.vlingo.symbio.store.object.geode;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+
+import java.io.File;
+import java.net.InetAddress;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Random;
+
+import org.apache.geode.cache.GemFireCache;
+import org.apache.geode.cache.Region;
+import org.apache.geode.cache.execute.FunctionService;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.ClassRule;
+import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.testcontainers.containers.DockerComposeContainer;
+import org.testcontainers.containers.output.Slf4jLogConsumer;
+import org.testcontainers.containers.wait.strategy.Wait;
+
 import io.vlingo.actors.Definition;
 import io.vlingo.actors.World;
 import io.vlingo.actors.testkit.AccessSafely;
@@ -24,28 +55,18 @@ import io.vlingo.symbio.store.common.geode.GeodeQueries;
 import io.vlingo.symbio.store.common.geode.pdx.PdxSerializerRegistry;
 import io.vlingo.symbio.store.common.geode.pdx.PersonSerializer;
 import io.vlingo.symbio.store.dispatch.Dispatchable;
-import io.vlingo.symbio.store.object.*;
+import io.vlingo.symbio.store.object.ListQueryExpression;
+import io.vlingo.symbio.store.object.ObjectStore;
 import io.vlingo.symbio.store.object.ObjectStoreReader.QueryMultiResults;
 import io.vlingo.symbio.store.object.ObjectStoreReader.QuerySingleResult;
+import io.vlingo.symbio.store.object.PersistentObject;
+import io.vlingo.symbio.store.object.PersistentObjectMapper;
+import io.vlingo.symbio.store.object.QueryExpression;
 import io.vlingo.symbio.store.state.MockObjectResultInterest;
-import org.apache.geode.cache.GemFireCache;
-import org.apache.geode.cache.Region;
-import org.apache.geode.cache.execute.FunctionService;
-import org.junit.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.testcontainers.containers.DockerComposeContainer;
-import org.testcontainers.containers.output.Slf4jLogConsumer;
-import org.testcontainers.containers.wait.strategy.Wait;
-
-import java.io.File;
-import java.net.InetAddress;
-import java.util.*;
-
-import static org.junit.Assert.*;
 /**
  * GeodeObjectStoreIT implements
  */
+@SuppressWarnings({"unchecked", "rawtypes"})
 public class GeodeObjectStoreIT {
 
   private static final Logger LOG = LoggerFactory.getLogger(GeodeObjectStoreIT.class);

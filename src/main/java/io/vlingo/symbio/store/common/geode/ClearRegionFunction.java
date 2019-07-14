@@ -1,4 +1,14 @@
+// Copyright © 2012-2018 Vaughn Vernon. All rights reserved.
+//
+// This Source Code Form is subject to the terms of the
+// Mozilla Public License, v. 2.0. If a copy of the MPL
+// was not distributed with this file, You can obtain
+// one at https://mozilla.org/MPL/2.0/.
+
 package io.vlingo.symbio.store.common.geode;
+
+import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.geode.cache.Declarable;
 import org.apache.geode.cache.Region;
@@ -7,10 +17,9 @@ import org.apache.geode.cache.execute.FunctionContext;
 import org.apache.geode.cache.execute.RegionFunctionContext;
 import org.apache.geode.cache.partition.PartitionRegionHelper;
 
-import java.util.ArrayList;
-import java.util.List;
-
+@SuppressWarnings({"unchecked", "rawtypes"})
 public class ClearRegionFunction implements Function, Declarable {
+    private static final long serialVersionUID = 1L;
 
     private static final int BATCH_SIZE = 30000;
 
