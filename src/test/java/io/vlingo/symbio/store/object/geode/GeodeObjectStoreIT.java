@@ -26,11 +26,7 @@ import java.util.Random;
 import org.apache.geode.cache.GemFireCache;
 import org.apache.geode.cache.Region;
 import org.apache.geode.cache.execute.FunctionService;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.junit.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.testcontainers.containers.DockerComposeContainer;
@@ -67,6 +63,7 @@ import io.vlingo.symbio.store.state.MockObjectResultInterest;
  * GeodeObjectStoreIT implements
  */
 @SuppressWarnings({"unchecked", "rawtypes"})
+@Ignore
 public class GeodeObjectStoreIT {
 
   private static final Logger LOG = LoggerFactory.getLogger(GeodeObjectStoreIT.class);

@@ -15,10 +15,7 @@ import java.util.Optional;
 import org.apache.geode.cache.GemFireCache;
 import org.apache.geode.cache.Region;
 import org.apache.geode.cache.execute.FunctionService;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.junit.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.testcontainers.containers.DockerComposeContainer;
@@ -37,6 +34,7 @@ import io.vlingo.symbio.store.common.geode.identity.LongSequence;
  * LongIDGeneratorIT
  */
 @SuppressWarnings({"unchecked", "rawtypes"})
+@Ignore
 public class LongIDGeneratorIT {
 
   private static final Logger LOG = LoggerFactory.getLogger(LongIDGeneratorIT.class);

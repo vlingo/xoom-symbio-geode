@@ -18,10 +18,7 @@ import java.util.Optional;
 import org.apache.geode.cache.GemFireCache;
 import org.apache.geode.cache.Region;
 import org.apache.geode.cache.execute.FunctionService;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.junit.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.testcontainers.containers.DockerComposeContainer;
@@ -53,6 +50,7 @@ import io.vlingo.symbio.store.state.StateTypeStateStoreMap;
  * GemFireStateStoreTest is responsible for testing {@link GeodeStateStoreActor}.
  */
 @SuppressWarnings({"unchecked", "rawtypes"})
+@Ignore
 public class GeodeStateStoreActorIT {
   private static final Logger LOG = LoggerFactory.getLogger(GeodeStateStoreActorIT.class);
   private final static String StoreName = Entity1.class.getSimpleName();
