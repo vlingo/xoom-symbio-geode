@@ -8,6 +8,7 @@ package io.vlingo.symbio.store.common.geode.dispatch;
 
 import io.vlingo.symbio.Entry;
 import io.vlingo.symbio.Metadata;
+import io.vlingo.symbio.State;
 import io.vlingo.symbio.State.ObjectState;
 import io.vlingo.symbio.store.Result;
 import io.vlingo.symbio.store.StorageException;
@@ -30,7 +31,7 @@ import java.util.Optional;
 /**
  * GeodeDispatcherControlDelegate is responsible for implementing functions required by {@code DispatcherControl} actor.
  */
-public class GeodeDispatcherControlDelegate implements DispatcherControl.DispatcherControlDelegate<Entry<?>, ObjectState<Object>> {
+public class GeodeDispatcherControlDelegate implements DispatcherControl.DispatcherControlDelegate<Entry<?>, State<?>> {
 
   private final String originatorId;
   private Query allUnconfirmedDispatchablesQuery;
@@ -62,9 +63,9 @@ public class GeodeDispatcherControlDelegate implements DispatcherControl.Dispatc
 
   @Override
   @SuppressWarnings("unchecked")
-  public Collection<Dispatchable<Entry<?>, ObjectState<Object>>> allUnconfirmedDispatchableStates() throws Exception {
-    SelectResults<GeodeDispatchable<ObjectState<Object>>> selected =
-            (SelectResults<GeodeDispatchable<ObjectState<Object>>>) allUnconfirmedDispatchablesQuery().execute(originatorId);
+  public Collection<Dispatchable<Entry<?>, State<?>>> allUnconfirmedDispatchableStates() throws Exception {
+    SelectResults<GeodeDispatchable<State<?>>> selected =
+            (SelectResults<GeodeDispatchable<State<?>>>) allUnconfirmedDispatchablesQuery().execute(originatorId);
     return new ArrayList<>(selected);
   }
 
@@ -78,5 +79,9 @@ public class GeodeDispatcherControlDelegate implements DispatcherControl.Dispatc
   @Override
   public void stop() {
 
+  }
+
+  public String getOriginatorId() {
+    return originatorId;
   }
 }
