@@ -9,11 +9,7 @@ package io.vlingo.symbio.store.object.geode;
 import io.vlingo.actors.Definition;
 import io.vlingo.actors.World;
 import io.vlingo.actors.testkit.AccessSafely;
-import io.vlingo.symbio.Entry;
-import io.vlingo.symbio.EntryAdapterProvider;
-import io.vlingo.symbio.Source;
-import io.vlingo.symbio.State;
-import io.vlingo.symbio.StateAdapterProvider;
+import io.vlingo.symbio.*;
 import io.vlingo.symbio.store.Result;
 import io.vlingo.symbio.store.common.MockObjectDispatcher;
 import io.vlingo.symbio.store.common.event.Event;
@@ -25,67 +21,37 @@ import io.vlingo.symbio.store.common.geode.GeodeQueries;
 import io.vlingo.symbio.store.common.geode.pdx.PdxSerializerRegistry;
 import io.vlingo.symbio.store.common.geode.pdx.PersonSerializer;
 import io.vlingo.symbio.store.dispatch.Dispatchable;
-import io.vlingo.symbio.store.object.ListQueryExpression;
-import io.vlingo.symbio.store.object.ObjectStore;
+import io.vlingo.symbio.store.object.*;
 import io.vlingo.symbio.store.object.ObjectStoreReader.QueryMultiResults;
 import io.vlingo.symbio.store.object.ObjectStoreReader.QuerySingleResult;
-import io.vlingo.symbio.store.object.PersistentObject;
-import io.vlingo.symbio.store.object.PersistentObjectMapper;
-import io.vlingo.symbio.store.object.QueryExpression;
 import io.vlingo.symbio.store.state.MockObjectResultInterest;
 import org.apache.geode.cache.GemFireCache;
 import org.apache.geode.cache.Region;
 import org.apache.geode.cache.execute.FunctionService;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.apache.geode.distributed.ConfigurationProperties;
+import org.apache.geode.test.dunit.rules.ClusterStartupRule;
+import org.apache.geode.test.dunit.rules.MemberVM;
+import org.junit.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.testcontainers.containers.DockerComposeContainer;
-import org.testcontainers.containers.output.Slf4jLogConsumer;
-import org.testcontainers.containers.wait.strategy.Wait;
 
-import java.io.File;
 import java.net.InetAddress;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Random;
+import java.util.*;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 /**
  * GeodeObjectStoreIT implements
  */
-@SuppressWarnings({"unchecked", "rawtypes"})
-@Ignore
 public class GeodeObjectStoreIT {
 
   private static final Logger LOG = LoggerFactory.getLogger(GeodeObjectStoreIT.class);
-  private static final String PERSON_REGION_PATH = "/Person";
+  private static final String PERSON_REGION_PATH = "Person";
 
   @ClassRule
-  public static DockerComposeContainer environment =
-    new DockerComposeContainer(new File("docker/docker-compose.yml"))
-      .withEnv("HOST_IP", hostIP())
-      .withEnv("USER_DIR", System.getProperty("user.dir"))
-      .withLogConsumer("locator", new Slf4jLogConsumer(LOG))
-      .withExposedService("server1", 40404)
-      .withLogConsumer("server1", new Slf4jLogConsumer(LOG))
-      .waitingFor("server1", Wait.forLogMessage(".*is currently online.*", 1))
-      .withExposedService("server2", 40405)
-      .withLogConsumer("server2", new Slf4jLogConsumer(LOG))
-      .waitingFor("server2", Wait.forLogMessage(".*is currently online.*", 1));
+  public static ClusterStartupRule cluster = new ClusterStartupRule();
+  private static MemberVM locator;
+  private static MemberVM server1;
+  private static MemberVM server2;
 
   private World world;
   private List<GeodePersistentObjectMapping> registeredMappings;
@@ -238,7 +204,7 @@ public class GeodeObjectStoreIT {
 
   @Test
   public void testThatMultipleEntitiesUpdate() {
-    clearEntities(GemFireCacheProvider.getAnyInstance().get());
+//    clearEntities(GemFireCacheProvider.getAnyInstance().get());
 
     dispatcher.afterCompleting(5);
     final MockPersistResultInterest persistInterest = new MockPersistResultInterest();
@@ -382,10 +348,24 @@ public class GeodeObjectStoreIT {
     }
   }
 
+  @BeforeClass
+  public static void beforeAnyTest() {
+    Properties serverProps = new Properties();
+    serverProps.put(ConfigurationProperties.CACHE_XML_FILE, "server-cache.xml");
+    serverProps.put(ConfigurationProperties.LOG_LEVEL, "error");
+
+    locator = cluster.startLocatorVM(0, serverProps);
+    server1 = cluster.startServerVM(1, serverProps, locator.getPort());
+    server2 = cluster.startServerVM(2, serverProps, locator.getPort());
+
+    System.setProperty("LOCATOR_IP", ipAddress());
+    System.setProperty("LOCATOR_PORT", String.valueOf(locator.getPort()));
+    System.setProperty("gemfire." + ConfigurationProperties.CACHE_XML_FILE, "client-cache.xml");
+    System.setProperty("gemfire." + ConfigurationProperties.LOG_LEVEL, "error");
+  }
+
   @Before
   public void beforeEachTest() {
-    System.setProperty("HOST_IP", hostIP());
-
     PdxSerializerRegistry.serializeTypeWith(Person.class, PersonSerializer.class);
 
     world = World.startWithDefaults("test-world");
@@ -448,7 +428,7 @@ public class GeodeObjectStoreIT {
     }
   }
 
-  private static String hostIP() {
+  private static String ipAddress() {
     try {
       return InetAddress.getLocalHost().getHostAddress();
     }

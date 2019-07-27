@@ -7,12 +7,7 @@
     <logger name="io.vlingo" level="debug" additivity="false">
         <appender-ref ref="STDOUT"/>
     </logger>
-    <logger name="org.apache.geode" level="INFO" additivity="false">
-        <appender-ref ref="STDOUT"/>
-    </logger>
-    <logger name="org.testcontainers" level="INFO"/>
-    <logger name="com.github.dockerjava" level="WARN"/>
-    <root level="DEBUG">
+    <root level="INFO">
         <appender-ref ref="STDOUT"/>
     </root>
 </configuration>

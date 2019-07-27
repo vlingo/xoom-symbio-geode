@@ -5,7 +5,7 @@
 		xsi:schemaLocation="http://geode.apache.org/schema/cache http://geode.apache.org/schema/cache/cache-1.0.xsd"
 		version="1.0">
 	<pool name="serverPool" >
-		<locator host="${HOST_IP}" port="10334"/>
+		<locator host="${LOCATOR_IP}" port="${LOCATOR_PORT}"/>
 	</pool>
 	<pdx>
 		<pdx-serializer>

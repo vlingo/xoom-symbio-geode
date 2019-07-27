@@ -43,8 +43,8 @@ import java.util.stream.Collectors;
 public class GeodeObjectStoreActor extends Actor implements ObjectStore {
 
   private static final Logger LOG = Logger.basicLogger();
-  public static final long CHECK_CONFIRMATION_EXPIRATION_INTERVAL_DEFAULT = 1000L;
-  public static final long CONFIRMATION_EXPIRATION_DEFAULT = 1000L;
+  private static final long CHECK_CONFIRMATION_EXPIRATION_INTERVAL_DEFAULT = 1000L;
+  private static final long CONFIRMATION_EXPIRATION_DEFAULT = 1000L;
 
   private boolean closed;
   private final String originatorId;
