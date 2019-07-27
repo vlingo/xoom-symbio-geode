@@ -6,22 +6,6 @@
 // one at https://mozilla.org/MPL/2.0/.
 package io.vlingo.symbio.store.object.geode;
 
-import static org.junit.Assert.assertEquals;
-
-import java.io.File;
-import java.net.InetAddress;
-import java.util.Optional;
-
-import org.apache.geode.cache.GemFireCache;
-import org.apache.geode.cache.Region;
-import org.apache.geode.cache.execute.FunctionService;
-import org.junit.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.testcontainers.containers.DockerComposeContainer;
-import org.testcontainers.containers.output.Slf4jLogConsumer;
-import org.testcontainers.containers.wait.strategy.Wait;
-
 import io.vlingo.actors.Definition;
 import io.vlingo.actors.World;
 import io.vlingo.symbio.store.common.geode.ClearRegionFunction;
@@ -30,27 +14,34 @@ import io.vlingo.symbio.store.common.geode.identity.IDGenerator;
 import io.vlingo.symbio.store.common.geode.identity.LongIDGenerator;
 import io.vlingo.symbio.store.common.geode.identity.LongIDGeneratorActor;
 import io.vlingo.symbio.store.common.geode.identity.LongSequence;
+import org.apache.geode.cache.GemFireCache;
+import org.apache.geode.cache.Region;
+import org.apache.geode.cache.execute.FunctionService;
+import org.apache.geode.distributed.ConfigurationProperties;
+import org.apache.geode.test.dunit.rules.ClusterStartupRule;
+import org.apache.geode.test.dunit.rules.MemberVM;
+import org.junit.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.net.InetAddress;
+import java.util.Optional;
+import java.util.Properties;
+
+import static org.junit.Assert.assertEquals;
 /**
  * LongIDGeneratorIT
  */
 @SuppressWarnings({"unchecked", "rawtypes"})
-@Ignore
 public class LongIDGeneratorIT {
 
   private static final Logger LOG = LoggerFactory.getLogger(LongIDGeneratorIT.class);
 
   @ClassRule
-  public static DockerComposeContainer environment =
-    new DockerComposeContainer(new File("docker/docker-compose.yml"))
-      .withEnv("HOST_IP", hostIP())
-      .withEnv("USER_DIR", System.getProperty("user.dir"))
-      .withLogConsumer("locator", new Slf4jLogConsumer(LOG))
-      .withExposedService("server1", 40404)
-      .withLogConsumer("server1", new Slf4jLogConsumer(LOG))
-      .waitingFor("server1", Wait.forLogMessage(".*is currently online.*", 1))
-      .withExposedService("server2", 40405)
-      .withLogConsumer("server2", new Slf4jLogConsumer(LOG))
-      .waitingFor("server2", Wait.forLogMessage(".*is currently online.*", 1));
+  public static ClusterStartupRule cluster = new ClusterStartupRule();
+  private static MemberVM locator;
+  private static MemberVM server1;
+  private static MemberVM server2;
 
   private World world;
 
@@ -93,10 +84,24 @@ public class LongIDGeneratorIT {
     assertEquals("next product ID is 3", new Long(3), generator.next(productSeq).await());
   }
 
+  @BeforeClass
+  public static void beforeAnyTest() {
+    Properties serverProps = new Properties();
+    serverProps.put(ConfigurationProperties.CACHE_XML_FILE, "server-cache.xml");
+    serverProps.put(ConfigurationProperties.LOG_LEVEL, "error");
+
+    locator = cluster.startLocatorVM(0, serverProps);
+    server1 = cluster.startServerVM(1, serverProps, locator.getPort());
+    server2 = cluster.startServerVM(2, serverProps, locator.getPort());
+
+    System.setProperty("LOCATOR_IP", ipAddress());
+    System.setProperty("LOCATOR_PORT", String.valueOf(locator.getPort()));
+    System.setProperty("gemfire." + ConfigurationProperties.CACHE_XML_FILE, "client-cache.xml");
+    System.setProperty("gemfire." + ConfigurationProperties.LOG_LEVEL, "error");
+  }
+
   @Before
   public void beforeEachTest() {
-    System.setProperty("HOST_IP", hostIP());
-    System.setProperty("gemfire.Query.VERBOSE","true");
     world = World.startWithDefaults("test-world");
   }
 
@@ -125,7 +130,7 @@ public class LongIDGeneratorIT {
     }
   }
 
-  private static String hostIP() {
+  private static String ipAddress() {
     try {
       return InetAddress.getLocalHost().getHostAddress();
     }
