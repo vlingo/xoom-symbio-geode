@@ -50,4 +50,9 @@ public class GeodeStateStoreEntryReaderActor<T extends Entry<?>> extends Actor i
     // TODO Auto-generated method stub
     return null;
   }
+
+  @Override
+  public Completes<Long> size() {
+    return null;
+  }
 }
