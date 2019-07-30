@@ -6,6 +6,29 @@
 // one at https://mozilla.org/MPL/2.0/.
 package io.vlingo.symbio.store.state.geode;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+
+import java.net.InetAddress;
+import java.util.Optional;
+import java.util.Properties;
+
+import org.apache.geode.cache.GemFireCache;
+import org.apache.geode.cache.Region;
+import org.apache.geode.cache.execute.FunctionService;
+import org.apache.geode.distributed.ConfigurationProperties;
+import org.apache.geode.test.dunit.rules.ClusterStartupRule;
+import org.apache.geode.test.dunit.rules.MemberVM;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.ClassRule;
+import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import io.vlingo.actors.Definition;
 import io.vlingo.actors.World;
 import io.vlingo.actors.testkit.AccessSafely;
@@ -27,21 +50,6 @@ import io.vlingo.symbio.store.state.Entity1.Entity1StateAdapter;
 import io.vlingo.symbio.store.state.MockObjectResultInterest;
 import io.vlingo.symbio.store.state.StateStore;
 import io.vlingo.symbio.store.state.StateTypeStateStoreMap;
-import org.apache.geode.cache.GemFireCache;
-import org.apache.geode.cache.Region;
-import org.apache.geode.cache.execute.FunctionService;
-import org.apache.geode.distributed.ConfigurationProperties;
-import org.apache.geode.test.dunit.rules.ClusterStartupRule;
-import org.apache.geode.test.dunit.rules.MemberVM;
-import org.junit.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.net.InetAddress;
-import java.util.Optional;
-import java.util.Properties;
-
-import static org.junit.Assert.*;
 /**
  * GemFireStateStoreTest is responsible for testing {@link GeodeStateStoreActor}.
  */
@@ -52,7 +60,9 @@ public class GeodeStateStoreActorIT {
   @ClassRule
   public static ClusterStartupRule cluster = new ClusterStartupRule();
   private static MemberVM locator;
+  @SuppressWarnings("unused")
   private static MemberVM server1;
+  @SuppressWarnings("unused")
   private static MemberVM server2;
 
   private MockObjectDispatcher dispatcher;
@@ -351,6 +361,7 @@ public class GeodeStateStoreActorIT {
     store = null;
   }
 
+  @SuppressWarnings("rawtypes")
   private void clearCache() {
     Optional<GemFireCache> cacheOrNull = GemFireCacheProvider.getAnyInstance();
     if (cacheOrNull.isPresent()) {
