@@ -6,16 +6,23 @@
 // one at https://mozilla.org/MPL/2.0/.
 package io.vlingo.symbio.store.common.geode.identity;
 
-import java.io.Serializable;
+import org.apache.geode.pdx.PdxReader;
+import org.apache.geode.pdx.PdxSerializable;
+import org.apache.geode.pdx.PdxWriter;
 /**
  * LongSequence models a monotonic sequence of Long-valued identifiers.
  */
-public class LongSequence implements Serializable {
-  
-  private static final long serialVersionUID = 1L;
-  
-  private final String name;
+public class LongSequence implements PdxSerializable {
+
+  private String name;
   private Long last = 0L;
+
+  /**
+   * This constructor is for serialization only.
+   */
+  public LongSequence() {
+    super();
+  }
 
   /**
    * Constructs a {@link LongSequence} named {@code name}.
@@ -96,5 +103,18 @@ public class LongSequence implements Serializable {
       .append(", last=").append(last)
       .append(")")
       .toString();
+  }
+
+  @Override
+  public void toData(PdxWriter out) {
+    out
+      .writeString("name", name)
+      .writeLong("last", last);
+  }
+
+  @Override
+  public void fromData(PdxReader in) {
+    this.name = in.readString("name");
+    this.last = in.readLong("last");
   }
 }
