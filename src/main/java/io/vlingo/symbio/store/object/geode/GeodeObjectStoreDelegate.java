@@ -6,16 +6,23 @@
 // one at https://mozilla.org/MPL/2.0/.
 package io.vlingo.symbio.store.object.geode;
 
+import io.vlingo.actors.Definition;
 import io.vlingo.actors.Logger;
+import io.vlingo.actors.Stage;
+import io.vlingo.actors.World;
 import io.vlingo.symbio.Entry;
 import io.vlingo.symbio.Metadata;
 import io.vlingo.symbio.State;
 import io.vlingo.symbio.StateAdapterProvider;
 import io.vlingo.symbio.store.Result;
 import io.vlingo.symbio.store.StorageException;
+import io.vlingo.symbio.store.common.geode.ConsistencyMode;
 import io.vlingo.symbio.store.common.geode.GemFireCacheProvider;
 import io.vlingo.symbio.store.common.geode.GeodeQueries;
 import io.vlingo.symbio.store.common.geode.dispatch.GeodeDispatcherControlDelegate;
+import io.vlingo.symbio.store.common.geode.identity.IDGenerator;
+import io.vlingo.symbio.store.common.geode.identity.LongIDGeneratorActor;
+import io.vlingo.symbio.store.common.geode.uow.GeodeUnitOfWork;
 import io.vlingo.symbio.store.dispatch.Dispatchable;
 import io.vlingo.symbio.store.object.ObjectStoreDelegate;
 import io.vlingo.symbio.store.object.ObjectStoreReader.QueryMultiResults;
@@ -28,34 +35,49 @@ import org.apache.geode.cache.Region;
 import org.apache.geode.cache.query.Query;
 import org.apache.geode.cache.query.QueryService;
 import org.apache.geode.cache.query.SelectResults;
+import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-
+import java.util.*;
+/**
+ * GeodeObjectStoreDelegate is responsible for adapting {@link io.vlingo.symbio.store.object.ObjectStore}
+ * to Apache Geode.
+ */
 public class GeodeObjectStoreDelegate extends GeodeDispatcherControlDelegate implements ObjectStoreDelegate<Entry<?>, State<?>> {
+  private static org.slf4j.Logger LOG = LoggerFactory.getLogger(GeodeObjectStoreDelegate.class);
+  public static final String ENTRY_SEQUENCE_NAME = "Entries";
+  public static final String UOW_SEQUENCE_NAME = "UnitsOfWork";
+  private final World world;
+  private final ConsistencyMode consistencyMode;
   private final Map<Class<?>, PersistentObjectMapper> mappers;
-  private final Logger logger;
   private final StateAdapterProvider stateAdapterProvider;
+  private GeodeUnitOfWork unitOfWork;
+  private IDGenerator<Long> idGenerator;
 
-  public GeodeObjectStoreDelegate(final String originatorId, final StateAdapterProvider stateAdapterProvider, final Logger logger) {
+  public GeodeObjectStoreDelegate(
+    final World world,
+    final ConsistencyMode mode,
+    final String originatorId,
+    final StateAdapterProvider stateAdapterProvider)
+  {
     super(originatorId);
-    this.logger = logger;
-    this.stateAdapterProvider = stateAdapterProvider;
+    this.world = world;
+    this.consistencyMode = mode;
     this.mappers = new HashMap<>();
+    this.stateAdapterProvider = stateAdapterProvider;
   }
 
-  private GeodeObjectStoreDelegate(final String originatorId, final Map<Class<?>, PersistentObjectMapper> mappers,
-          final StateAdapterProvider stateAdapterProvider, final Logger logger) {
+  private GeodeObjectStoreDelegate(
+    final World world,
+    final ConsistencyMode mode,
+    final String originatorId,
+    final Map<Class<?>, PersistentObjectMapper> mappers,
+    final StateAdapterProvider stateAdapterProvider)
+  {
     super(originatorId);
-    this.logger = logger;
-    this.stateAdapterProvider = stateAdapterProvider;
+    this.world = world;
+    this.consistencyMode = mode;
     this.mappers = mappers;
+    this.stateAdapterProvider = stateAdapterProvider;
   }
 
   @Override
@@ -70,114 +92,164 @@ public class GeodeObjectStoreDelegate extends GeodeDispatcherControlDelegate imp
 
   @Override
   public ObjectStoreDelegate copy() {
-    return new GeodeObjectStoreDelegate(getOriginatorId(), this.stateAdapterProvider, this.logger);
+    return new GeodeObjectStoreDelegate(
+      this.world,
+      this.consistencyMode,
+      getOriginatorId(),
+      this.stateAdapterProvider);
   }
 
   @Override
   public void beginTransaction() {
-    //Geode store does not require transactions
+    LOG.debug("beginTransaction - entered");
+    try {
+      if (consistencyMode.isTransactional()) {
+        cache().getCacheTransactionManager().begin();
+      }
+      this.unitOfWork = new GeodeUnitOfWork();
+    }
+    finally {
+      LOG.debug("beginTransaction - exited");
+    }
   }
 
   @Override
   public void completeTransaction() {
-    //Geode store does not require transactions
+    LOG.debug("completeTransaction - entered");
+    try {
+      idGenerator()
+        .next(UOW_SEQUENCE_NAME)
+        .andThenConsume(id -> {
+          unitOfWork.withId(id);
+          if (consistencyMode.isTransactional()) {
+            unitOfWork.applyTo(cache());
+            cache().getCacheTransactionManager().commit();
+          } else {
+            regionFor(GeodeQueries.OBJECTSTORE_UOW_REGION_PATH).put(id, unitOfWork);
+          }
+        });
+    }
+    finally {
+      LOG.debug("completeTransaction - exited");
+    }
   }
 
   @Override
   public void failTransaction() {
-    //Geode store does not require transactions
+    LOG.debug("failTransaction - entered");
+    try {
+      this.unitOfWork = null;
+      if (consistencyMode.isTransactional()) {
+        cache().getCacheTransactionManager().rollback();
+      }
+    }
+    finally {
+      LOG.debug("failTransaction - entered");
+    }
   }
 
   @Override
-  public <T extends PersistentObject> Collection<State<?>> persistAll(final Collection<T> objectsToPersist, final long updateId, final Metadata metadata)
-          throws StorageException {
-    String regionName = null;
-    Region<Long, T> region = null;
-    Map<Long, T> newEntries = new HashMap<>();
-    final List<State<?>> states = new ArrayList<>(objectsToPersist.size());
-    for (T objectToPersist : objectsToPersist) {
+  public <T extends PersistentObject> State<?> persist(final T objectToPersist, final long updateId, final Metadata metadata) throws StorageException {
+    LOG.debug("persist - entered with objectToPersist=" + objectToPersist);
+    try {
+      final Class<?> typeToPersist = objectToPersist.getClass();
+      final GeodePersistentObjectMapping mapping = persistMappingFor(typeToPersist);
+      final Region<Long, T> region = regionFor(mapping.regionPath);
 
-      final PersistentObjectMapper mapper = mappers.get(objectToPersist.getClass());
-      GeodePersistentObjectMapping mapping = mapper.persistMapper();
-
-      if (region == null) {
-        regionName = mapping.regionName;
-        region = cache().getRegion(regionName);
-      } else if (!regionName.equals(mapping.regionName)) {
-        /*
-         * This ObjectStore implementation currently requires that all elements of
-         * the argument objectsToPersist must be stored in the same Region (though
-         * the only supertype they must share is VersionedPeristentObject). This
-         * requirement allows the entire collection of objects to be stored in one
-         * atomic operation using Region.putAll without resorting to using
-         * transactions (which impose many additional constraints as documented here:
-         * https://geode.apache.org/docs/guide/18/developing/transactions/design_considerations.html)
-         */
-        throw new StorageException(Result.Error, "persistAll requires that the collection of objects to be persisted must share the same single Geode Region");
-      }
-
-      final T mutatedObject = objectToPersist;
-      final T persistedObject = region.get(mutatedObject.persistenceId());
-      if (persistedObject == null) {
-        newEntries.put(mutatedObject.persistenceId(), mutatedObject);
-      } else {
+      final T persistedObject = region.get(objectToPersist.persistenceId());
+      if (persistedObject != null) {
         final long persistedObjectVersion = persistedObject.version();
-        final long mutatedObjectVersion = mutatedObject.version();
+        final long mutatedObjectVersion = objectToPersist.version();
         if (persistedObjectVersion > mutatedObjectVersion) {
           throw new StorageException(Result.ConcurrencyViolation,
-                  "Version conflict for object with persistenceId " + mutatedObject.persistenceId() + "; attempted to overwrite current entry with version "
-                          + persistedObjectVersion + " with version " + mutatedObjectVersion);
-        } else {
-          newEntries.put(mutatedObject.persistenceId(), mutatedObject);
+            "Version conflict for object with persistenceId " +
+              objectToPersist.persistenceId() +
+              "; attempted to overwrite current entry of version " +
+              persistedObjectVersion + " with version " +
+              mutatedObjectVersion);
         }
       }
+      objectToPersist.incrementVersion();
+      unitOfWork.persistEntity(mapping.regionPath, objectToPersist);
 
-      final State<?> raw = stateAdapterProvider.asRaw(String.valueOf(objectToPersist.persistenceId()), objectToPersist, 1, metadata);
-      states.add(raw);
+      return stateAdapterProvider.asRaw(String.valueOf(objectToPersist.persistenceId()), objectToPersist, 1, metadata);
     }
-
-    newEntries.forEach((k, v) -> v.incrementVersion());
-    logger.info("persist - putAll: " + Arrays.toString(newEntries.values().toArray()));
-    region.putAll(newEntries);
-
-    return states;
+    finally {
+      LOG.debug("persist - exited with objectToPersist=" + objectToPersist);
+    }
   }
 
   @Override
-  public <T extends PersistentObject> State<?> persist(final T persistentObject, final long updateId, final Metadata metadata) throws StorageException {
-    final PersistentObjectMapper mapper = mappers.get(persistentObject.getClass());
-    GeodePersistentObjectMapping mapping = mapper.persistMapper();
+  public <T extends PersistentObject> Collection<State<?>> persistAll(final Collection<T> objectsToPersist, final long updateId, final Metadata metadata) throws StorageException {
+    LOG.debug("persistAll - entered");
+    try {
+      final List<State<?>> states = new ArrayList<>(objectsToPersist.size());
 
-    Region<Long, T> aggregateRegion = cache().getRegion(mapping.regionName);
-    if (aggregateRegion == null) {
-      throw new StorageException(Result.NoTypeStore, "Region not configured: " + mapping.regionName);
-    }
+      for (T objectToPersist : objectsToPersist) {
 
-    final T mutatedAggregate = persistentObject;
-    final T persistedAggregate = aggregateRegion.get(mutatedAggregate.persistenceId());
-    if (persistedAggregate != null) {
-      final long persistedAggregateVersion = persistedAggregate.version();
-      final long mutatedAggregateVersion = mutatedAggregate.version();
-      if (persistedAggregateVersion > mutatedAggregateVersion) {
-        throw new StorageException(Result.ConcurrencyViolation, "Version conflict");
+        final Class<?> typeToPersist = objectToPersist.getClass();
+        final GeodePersistentObjectMapping mapping = persistMappingFor(typeToPersist);
+        final Region<Long, T> region = regionFor(mapping.regionPath);
+
+        final T persistedObject = region.get(objectToPersist.persistenceId());
+        if (persistedObject != null) {
+          final long persistedObjectVersion = persistedObject.version();
+          final long mutatedObjectVersion = objectToPersist.version();
+          if (persistedObjectVersion > mutatedObjectVersion) {
+            throw new StorageException(Result.ConcurrencyViolation,
+              "Version conflict for object with persistenceId " +
+                objectToPersist.persistenceId() +
+                "; attempted to overwrite current entry of version "
+                + persistedObjectVersion +
+                " with version " + mutatedObjectVersion);
+          }
+        }
+        objectToPersist.incrementVersion();
+        unitOfWork.persistEntity(mapping.regionPath, objectToPersist);
+
+        final State<?> raw = stateAdapterProvider.asRaw(String.valueOf(objectToPersist.persistenceId()), objectToPersist, 1, metadata);
+        states.add(raw);
       }
+      return states;
     }
-    mutatedAggregate.incrementVersion();
-    logger.info("persist - put: " + mutatedAggregate);
-    aggregateRegion.put(mutatedAggregate.persistenceId(), mutatedAggregate);
-
-    return stateAdapterProvider.asRaw(String.valueOf(persistentObject.persistenceId()), persistentObject, 1, metadata);
+    finally {
+      LOG.debug("persistAll - exited");
+    }
   }
 
   @Override
   public void persistEntries(final Collection<Entry<?>> entries) throws StorageException {
-    //TODO: persist sources
+    LOG.debug("persistEntries - entered");
+    try {
+      for (final Entry<?> entry : entries) {
+        final GeodeEventJournalEntry geodeEntry;
+        if (entry instanceof GeodeEventJournalEntry) {
+          geodeEntry = (GeodeEventJournalEntry) entry;
+        } else {
+          geodeEntry = new GeodeEventJournalEntry(entry);
+        }
+        idGenerator()
+          .next(ENTRY_SEQUENCE_NAME)
+          .andThenConsume(id -> {
+            geodeEntry.__internal__setId(String.valueOf(id));
+            unitOfWork.persistEntry(geodeEntry);
+          });
+      }
+    }
+    finally {
+      LOG.debug("persistEntries - exited");
+    }
   }
 
   @Override
   public void persistDispatchable(final Dispatchable<Entry<?>, State<?>> dispatchable) throws StorageException {
-    Region<String, Dispatchable<Entry<?>, State<?>>> dispatchablesRegion = cache().getRegion(GeodeQueries.DISPATCHABLES_REGION_PATH);
-    dispatchablesRegion.put(dispatchable.id(), dispatchable);
+    LOG.debug("persistDispatchable - entered");
+    try {
+      unitOfWork.persistDispatchable(dispatchable);
+    }
+    finally {
+      LOG.debug("persistDispatchable - exited");
+    }
   }
 
   @Override
@@ -210,6 +282,10 @@ public class GeodeObjectStoreDelegate extends GeodeDispatcherControlDelegate imp
     return results;
   }
 
+  private Logger logger() {
+    return world.defaultLogger();
+  }
+
   private GemFireCache cache() {
     Optional<GemFireCache> cacheOrNull = GemFireCacheProvider.getAnyInstance();
     if (cacheOrNull.isPresent()) {
@@ -217,5 +293,32 @@ public class GeodeObjectStoreDelegate extends GeodeDispatcherControlDelegate imp
     } else {
       throw new StorageException(Result.NoTypeStore, "No GemFireCache has been created in this JVM");
     }
+  }
+
+  private IDGenerator<Long> idGenerator() {
+    if (idGenerator == null) {
+      idGenerator = world.actorFor(
+        IDGenerator.class,
+        Definition.has(
+          LongIDGeneratorActor.class,
+          Definition.parameters(1L)));
+    }
+    return idGenerator;
+  }
+
+  private <K, V> Region<K, V> regionFor(final String path) throws StorageException {
+    Region<K, V> region = cache().getRegion(path);
+    if (region == null) {
+      throw new StorageException(Result.NoTypeStore, "Region is not configured: " + path);
+    }
+    return region;
+  }
+
+  private GeodePersistentObjectMapping persistMappingFor(final Class<?> type) throws StorageException {
+    final PersistentObjectMapper mapper = mappers.get(type);
+    if (mapper == null) {
+      throw new StorageException(Result.Error, "PersistentObjectMapper is not configured for type: " + type.getName());
+    }
+    return mapper.persistMapper();
   }
 }

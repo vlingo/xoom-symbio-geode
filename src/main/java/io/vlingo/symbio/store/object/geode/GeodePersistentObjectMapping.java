@@ -10,9 +10,11 @@ package io.vlingo.symbio.store.object.geode;
  */
 public class GeodePersistentObjectMapping {
   
-  public final String regionName;
+  public final String regionPath;
 
-  public GeodePersistentObjectMapping(final String regionName) {
-    this.regionName = regionName;
+  public GeodePersistentObjectMapping(final String regionPath) {
+    if (regionPath == null || regionPath.isEmpty())
+      throw new IllegalArgumentException("regionPath must be a non-empty String");
+    this.regionPath = regionPath;
   }
 }
