@@ -7,16 +7,12 @@
 package io.vlingo.symbio.store.common.geode.dispatch;
 
 import io.vlingo.symbio.Entry;
-import io.vlingo.symbio.Metadata;
 import io.vlingo.symbio.State;
 import io.vlingo.symbio.State.ObjectState;
 import io.vlingo.symbio.store.Result;
 import io.vlingo.symbio.store.StorageException;
 import io.vlingo.symbio.store.common.geode.GemFireCacheProvider;
 import io.vlingo.symbio.store.common.geode.GeodeQueries;
-import io.vlingo.symbio.store.common.geode.pdx.GeodeDispatchableSerializer;
-import io.vlingo.symbio.store.common.geode.pdx.MetadataPdxSerializer;
-import io.vlingo.symbio.store.common.geode.pdx.PdxSerializerRegistry;
 import io.vlingo.symbio.store.dispatch.Dispatchable;
 import io.vlingo.symbio.store.dispatch.DispatcherControl;
 import org.apache.geode.cache.GemFireCache;
@@ -37,8 +33,6 @@ public class GeodeDispatcherControlDelegate implements DispatcherControl.Dispatc
   private Query allUnconfirmedDispatchablesQuery;
   
   public GeodeDispatcherControlDelegate(final String originatorId) {
-    PdxSerializerRegistry.serializeTypeWith(GeodeDispatchable.class, GeodeDispatchableSerializer.class);
-    PdxSerializerRegistry.serializeTypeWith(Metadata.class, MetadataPdxSerializer.class);
     this.originatorId = originatorId;
   }
 
