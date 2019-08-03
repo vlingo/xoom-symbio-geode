@@ -34,37 +34,19 @@ public class GeodeStateStoreEntryReaderActor<T extends Entry<?>> extends Actor i
   }
 
   @Override
-  public Completes<T> readNext(final String fromId) {
-    seekTo(fromId);
-    return readNext();
-  }
-
-  @Override
   public Completes<List<T>> readNext(final int maximumEntries) {
     // TODO Auto-generated method stub
     return null;
   }
 
   @Override
-  public Completes<List<T>> readNext(final String fromId, final int maximumEntries) {
-    seekTo(fromId);
-    return readNext(maximumEntries);
-  }
-
-  @Override
   public void rewind() {
     // TODO Auto-generated method stub
-
   }
 
   @Override
   public Completes<String> seekTo(final String id) {
     // TODO Auto-generated method stub
-    return null;
-  }
-
-  @Override
-  public Completes<Long> size() {
     return null;
   }
 }
