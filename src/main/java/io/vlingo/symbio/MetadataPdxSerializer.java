@@ -4,14 +4,14 @@
 // Mozilla Public License, v. 2.0. If a copy of the MPL
 // was not distributed with this file, You can obtain
 // one at https://mozilla.org/MPL/2.0/.
-package io.vlingo.symbio.store.common.geode.pdx;
+package io.vlingo.symbio;
 
+import io.vlingo.symbio.Metadata;
 import org.apache.geode.cache.Declarable;
 import org.apache.geode.pdx.PdxReader;
 import org.apache.geode.pdx.PdxSerializer;
 import org.apache.geode.pdx.PdxWriter;
 
-import io.vlingo.symbio.Metadata;
 /**
  * MetadataPdxSerializer is responsible for serializing instances of
  * {@link Metadata}. It is necessary to customize the PDX serialization
@@ -21,7 +21,6 @@ public class MetadataPdxSerializer implements PdxSerializer, Declarable {
 
   /**
    * Constructs a MetadataPdxSerializer.
-   *
    */
   public MetadataPdxSerializer() {
     super();
