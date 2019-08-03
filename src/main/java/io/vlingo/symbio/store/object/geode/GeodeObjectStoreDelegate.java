@@ -8,7 +8,6 @@ package io.vlingo.symbio.store.object.geode;
 
 import io.vlingo.actors.Definition;
 import io.vlingo.actors.Logger;
-import io.vlingo.actors.Stage;
 import io.vlingo.actors.World;
 import io.vlingo.symbio.Entry;
 import io.vlingo.symbio.Metadata;
@@ -43,10 +42,12 @@ import java.util.*;
  * to Apache Geode.
  */
 public class GeodeObjectStoreDelegate extends GeodeDispatcherControlDelegate implements ObjectStoreDelegate<Entry<?>, State<?>> {
-  private static org.slf4j.Logger LOG = LoggerFactory.getLogger(GeodeObjectStoreDelegate.class);
+  
   public static final String ENTRY_SEQUENCE_NAME = "Entries";
   public static final String UOW_SEQUENCE_NAME = "UnitsOfWork";
+  
   private final World world;
+  private final Logger logger;
   private final ConsistencyMode consistencyMode;
   private final Map<Class<?>, PersistentObjectMapper> mappers;
   private final StateAdapterProvider stateAdapterProvider;
@@ -61,6 +62,7 @@ public class GeodeObjectStoreDelegate extends GeodeDispatcherControlDelegate imp
   {
     super(originatorId);
     this.world = world;
+    this.logger = world.defaultLogger();
     this.consistencyMode = mode;
     this.mappers = new HashMap<>();
     this.stateAdapterProvider = stateAdapterProvider;
@@ -75,6 +77,7 @@ public class GeodeObjectStoreDelegate extends GeodeDispatcherControlDelegate imp
   {
     super(originatorId);
     this.world = world;
+    this.logger = world.defaultLogger();
     this.consistencyMode = mode;
     this.mappers = mappers;
     this.stateAdapterProvider = stateAdapterProvider;
@@ -91,6 +94,7 @@ public class GeodeObjectStoreDelegate extends GeodeDispatcherControlDelegate imp
   }
 
   @Override
+  @SuppressWarnings("rawtypes")
   public ObjectStoreDelegate copy() {
     return new GeodeObjectStoreDelegate(
       this.world,
@@ -101,7 +105,7 @@ public class GeodeObjectStoreDelegate extends GeodeDispatcherControlDelegate imp
 
   @Override
   public void beginTransaction() {
-    LOG.debug("beginTransaction - entered");
+    logger.debug("beginTransaction - entered");
     try {
       if (consistencyMode.isTransactional()) {
         cache().getCacheTransactionManager().begin();
@@ -109,13 +113,13 @@ public class GeodeObjectStoreDelegate extends GeodeDispatcherControlDelegate imp
       this.unitOfWork = new GeodeUnitOfWork();
     }
     finally {
-      LOG.debug("beginTransaction - exited");
+      logger.debug("beginTransaction - exited");
     }
   }
 
   @Override
   public void completeTransaction() {
-    LOG.debug("completeTransaction - entered");
+    logger.debug("completeTransaction - entered");
     try {
       idGenerator()
         .next(UOW_SEQUENCE_NAME)
@@ -130,13 +134,13 @@ public class GeodeObjectStoreDelegate extends GeodeDispatcherControlDelegate imp
         });
     }
     finally {
-      LOG.debug("completeTransaction - exited");
+      logger.debug("completeTransaction - exited");
     }
   }
 
   @Override
   public void failTransaction() {
-    LOG.debug("failTransaction - entered");
+    logger.debug("failTransaction - entered");
     try {
       this.unitOfWork = null;
       if (consistencyMode.isTransactional()) {
@@ -144,13 +148,13 @@ public class GeodeObjectStoreDelegate extends GeodeDispatcherControlDelegate imp
       }
     }
     finally {
-      LOG.debug("failTransaction - entered");
+      logger.debug("failTransaction - entered");
     }
   }
 
   @Override
   public <T extends PersistentObject> State<?> persist(final T objectToPersist, final long updateId, final Metadata metadata) throws StorageException {
-    LOG.debug("persist - entered with objectToPersist=" + objectToPersist);
+    logger.debug("persist - entered with objectToPersist=" + objectToPersist);
     try {
       final Class<?> typeToPersist = objectToPersist.getClass();
       final GeodePersistentObjectMapping mapping = persistMappingFor(typeToPersist);
@@ -175,13 +179,13 @@ public class GeodeObjectStoreDelegate extends GeodeDispatcherControlDelegate imp
       return stateAdapterProvider.asRaw(String.valueOf(objectToPersist.persistenceId()), objectToPersist, 1, metadata);
     }
     finally {
-      LOG.debug("persist - exited with objectToPersist=" + objectToPersist);
+      logger.debug("persist - exited with objectToPersist=" + objectToPersist);
     }
   }
 
   @Override
   public <T extends PersistentObject> Collection<State<?>> persistAll(final Collection<T> objectsToPersist, final long updateId, final Metadata metadata) throws StorageException {
-    LOG.debug("persistAll - entered");
+    logger.debug("persistAll - entered");
     try {
       final List<State<?>> states = new ArrayList<>(objectsToPersist.size());
 
@@ -213,13 +217,13 @@ public class GeodeObjectStoreDelegate extends GeodeDispatcherControlDelegate imp
       return states;
     }
     finally {
-      LOG.debug("persistAll - exited");
+      logger.debug("persistAll - exited");
     }
   }
 
   @Override
   public void persistEntries(final Collection<Entry<?>> entries) throws StorageException {
-    LOG.debug("persistEntries - entered");
+    logger.debug("persistEntries - entered");
     try {
       for (final Entry<?> entry : entries) {
         final GeodeEventJournalEntry geodeEntry;
@@ -237,18 +241,18 @@ public class GeodeObjectStoreDelegate extends GeodeDispatcherControlDelegate imp
       }
     }
     finally {
-      LOG.debug("persistEntries - exited");
+      logger.debug("persistEntries - exited");
     }
   }
 
   @Override
   public void persistDispatchable(final Dispatchable<Entry<?>, State<?>> dispatchable) throws StorageException {
-    LOG.debug("persistDispatchable - entered");
+    logger.debug("persistDispatchable - entered");
     try {
       unitOfWork.persistDispatchable(dispatchable);
     }
     finally {
-      LOG.debug("persistDispatchable - exited");
+      logger.debug("persistDispatchable - exited");
     }
   }
 
@@ -282,10 +286,6 @@ public class GeodeObjectStoreDelegate extends GeodeDispatcherControlDelegate imp
     return results;
   }
 
-  private Logger logger() {
-    return world.defaultLogger();
-  }
-
   private GemFireCache cache() {
     Optional<GemFireCache> cacheOrNull = GemFireCacheProvider.getAnyInstance();
     if (cacheOrNull.isPresent()) {
@@ -295,6 +295,7 @@ public class GeodeObjectStoreDelegate extends GeodeDispatcherControlDelegate imp
     }
   }
 
+  @SuppressWarnings("unchecked")
   private IDGenerator<Long> idGenerator() {
     if (idGenerator == null) {
       idGenerator = world.actorFor(

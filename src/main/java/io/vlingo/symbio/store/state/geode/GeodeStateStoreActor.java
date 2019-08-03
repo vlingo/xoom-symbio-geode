@@ -6,6 +6,15 @@
 // one at https://mozilla.org/MPL/2.0/.
 package io.vlingo.symbio.store.state.geode;
 
+import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
+import org.apache.geode.cache.GemFireCache;
+import org.apache.geode.cache.Region;
+
 import io.vlingo.actors.Actor;
 import io.vlingo.actors.Definition;
 import io.vlingo.common.Completes;
@@ -31,14 +40,6 @@ import io.vlingo.symbio.store.dispatch.control.DispatcherControlActor;
 import io.vlingo.symbio.store.state.StateStore;
 import io.vlingo.symbio.store.state.StateStoreEntryReader;
 import io.vlingo.symbio.store.state.StateTypeStateStoreMap;
-import org.apache.geode.cache.GemFireCache;
-import org.apache.geode.cache.Region;
-
-import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
 /**
  * GeodeStateStoreActor is responsible for reading and writing
  * objects from/to a GemFire cache.
@@ -77,7 +78,7 @@ public class GeodeStateStoreActor extends Actor implements StateStore {
 
     this.entryAdapterProvider = EntryAdapterProvider.instance(stage().world());
     this.stateAdapterProvider = StateAdapterProvider.instance(stage().world());
-    
+
     final GeodeDispatcherControlDelegate controlDelegate = new GeodeDispatcherControlDelegate(originatorId);
     dispatcherControl = stage().actorFor(
       DispatcherControl.class,
@@ -108,7 +109,7 @@ public class GeodeStateStoreActor extends Actor implements StateStore {
     StateStoreEntryReader<?> reader = entryReaders.get(name);
     if (reader == null) {
       final EntryReader.Advice advice =
-              new EntryReader.Advice(null, GeodeStateStoreEntryReaderActor.class,  null, null);
+              new EntryReader.Advice(null, GeodeStateStoreEntryReaderActor.class,  null, null, null, null, null);
       reader = childActorFor(StateStoreEntryReader.class, Definition.has(advice.entryReaderClass, Definition.parameters(advice, name)));
       entryReaders.put(name, reader);
     }

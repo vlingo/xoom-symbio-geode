@@ -6,6 +6,29 @@
 // one at https://mozilla.org/MPL/2.0/.
 package io.vlingo.symbio.store.state.geode;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+
+import java.net.InetAddress;
+import java.util.Optional;
+import java.util.Properties;
+
+import org.apache.geode.cache.GemFireCache;
+import org.apache.geode.cache.Region;
+import org.apache.geode.cache.execute.FunctionService;
+import org.apache.geode.distributed.ConfigurationProperties;
+import org.apache.geode.test.dunit.rules.ClusterStartupRule;
+import org.apache.geode.test.dunit.rules.MemberVM;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.ClassRule;
+import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import io.vlingo.actors.Definition;
 import io.vlingo.actors.World;
 import io.vlingo.actors.testkit.AccessSafely;
@@ -27,21 +50,6 @@ import io.vlingo.symbio.store.state.Entity1.Entity1StateAdapter;
 import io.vlingo.symbio.store.state.MockObjectResultInterest;
 import io.vlingo.symbio.store.state.StateStore;
 import io.vlingo.symbio.store.state.StateTypeStateStoreMap;
-import org.apache.geode.cache.GemFireCache;
-import org.apache.geode.cache.Region;
-import org.apache.geode.cache.execute.FunctionService;
-import org.apache.geode.distributed.ConfigurationProperties;
-import org.apache.geode.test.dunit.rules.ClusterStartupRule;
-import org.apache.geode.test.dunit.rules.MemberVM;
-import org.junit.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.net.InetAddress;
-import java.util.Optional;
-import java.util.Properties;
-
-import static org.junit.Assert.*;
 /**
  * GemFireStateStoreTest is responsible for testing {@link GeodeStateStoreActor}.
  */
@@ -51,17 +59,11 @@ public class GeodeStateStoreActorIT {
 
   @ClassRule
   public static ClusterStartupRule cluster = new ClusterStartupRule();
-  private static MemberVM locator;
-  private static MemberVM server1;
-  private static MemberVM server2;
 
   private MockObjectDispatcher dispatcher;
   private MockObjectResultInterest interest;
   private StateStore store;
-  private TestWorld testWorld;
   private World world;
-  private EntryAdapterProvider entryAdapterProvider;
-  private StateAdapterProvider stateAdapterProvider;
 
   @Test
   public void testThatStateStoreWritesText() {
@@ -300,9 +302,9 @@ public class GeodeStateStoreActorIT {
     serverProps.put(ConfigurationProperties.CACHE_XML_FILE, "server-cache.xml");
     serverProps.put(ConfigurationProperties.LOG_LEVEL, "error");
 
-    locator = cluster.startLocatorVM(0, serverProps);
-    server1 = cluster.startServerVM(1, serverProps, locator.getPort());
-    server2 = cluster.startServerVM(2, serverProps, locator.getPort());
+    MemberVM locator = cluster.startLocatorVM(0, serverProps);
+    MemberVM server1 = cluster.startServerVM(1, serverProps, locator.getPort());
+    MemberVM server2 = cluster.startServerVM(2, serverProps, locator.getPort());
 
     System.setProperty("LOCATOR_IP", ipAddress());
     System.setProperty("LOCATOR_PORT", String.valueOf(locator.getPort()));
@@ -313,7 +315,7 @@ public class GeodeStateStoreActorIT {
 
   @Before
   public void beforeEachTest() {
-    testWorld = TestWorld.startWithDefaults("test-store");
+    TestWorld testWorld = TestWorld.startWithDefaults("test-store");
     world = testWorld.world();
 
     interest = new MockObjectResultInterest();
@@ -323,9 +325,9 @@ public class GeodeStateStoreActorIT {
     final long checkConfirmationExpirationInterval = 1000L;
     final long confirmationExpiration = 1000L;
 
-    stateAdapterProvider = new StateAdapterProvider(world);
+    StateAdapterProvider stateAdapterProvider = new StateAdapterProvider(world);
     stateAdapterProvider.registerAdapter(Entity1.class, new Entity1StateAdapter());
-    entryAdapterProvider = EntryAdapterProvider.instance(world);
+    EntryAdapterProvider entryAdapterProvider = EntryAdapterProvider.instance(world);
     entryAdapterProvider.registerAdapter(TestEvent.class, new TestEventAdapter());
     new EntryAdapterProvider(world); //entryAdapterProvider =
 
@@ -351,6 +353,7 @@ public class GeodeStateStoreActorIT {
     store = null;
   }
 
+  @SuppressWarnings("rawtypes")
   private void clearCache() {
     Optional<GemFireCache> cacheOrNull = GemFireCacheProvider.getAnyInstance();
     if (cacheOrNull.isPresent()) {

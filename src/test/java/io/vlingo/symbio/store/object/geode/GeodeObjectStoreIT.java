@@ -6,10 +6,46 @@
 // one at https://mozilla.org/MPL/2.0/.
 package io.vlingo.symbio.store.object.geode;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+
+import java.net.InetAddress;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Properties;
+import java.util.Random;
+
+import org.apache.geode.cache.GemFireCache;
+import org.apache.geode.cache.Region;
+import org.apache.geode.cache.execute.FunctionService;
+import org.apache.geode.distributed.ConfigurationProperties;
+import org.apache.geode.test.dunit.rules.ClusterStartupRule;
+import org.apache.geode.test.dunit.rules.MemberVM;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.ClassRule;
+import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import io.vlingo.actors.Definition;
 import io.vlingo.actors.World;
 import io.vlingo.actors.testkit.AccessSafely;
-import io.vlingo.symbio.*;
+import io.vlingo.symbio.Entry;
+import io.vlingo.symbio.EntryAdapterProvider;
+import io.vlingo.symbio.Source;
+import io.vlingo.symbio.State;
+import io.vlingo.symbio.StateAdapterProvider;
 import io.vlingo.symbio.store.Result;
 import io.vlingo.symbio.store.common.MockObjectDispatcher;
 import io.vlingo.symbio.store.common.event.Event;
@@ -20,24 +56,14 @@ import io.vlingo.symbio.store.common.geode.GemFireCacheProvider;
 import io.vlingo.symbio.store.common.geode.GeodeQueries;
 import io.vlingo.symbio.store.common.geode.functions.ClearRegionFunction;
 import io.vlingo.symbio.store.dispatch.Dispatchable;
-import io.vlingo.symbio.store.object.*;
+import io.vlingo.symbio.store.object.ListQueryExpression;
+import io.vlingo.symbio.store.object.ObjectStore;
 import io.vlingo.symbio.store.object.ObjectStoreReader.QueryMultiResults;
 import io.vlingo.symbio.store.object.ObjectStoreReader.QuerySingleResult;
+import io.vlingo.symbio.store.object.PersistentObject;
+import io.vlingo.symbio.store.object.PersistentObjectMapper;
+import io.vlingo.symbio.store.object.QueryExpression;
 import io.vlingo.symbio.store.state.MockObjectResultInterest;
-import org.apache.geode.cache.GemFireCache;
-import org.apache.geode.cache.Region;
-import org.apache.geode.cache.execute.FunctionService;
-import org.apache.geode.distributed.ConfigurationProperties;
-import org.apache.geode.test.dunit.rules.ClusterStartupRule;
-import org.apache.geode.test.dunit.rules.MemberVM;
-import org.junit.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.net.InetAddress;
-import java.util.*;
-
-import static org.junit.Assert.*;
 /**
  * GeodeObjectStoreIT implements
  */
@@ -48,14 +74,10 @@ public class GeodeObjectStoreIT {
 
   @ClassRule
   public static ClusterStartupRule cluster = new ClusterStartupRule();
-  private static MemberVM locator;
-  private static MemberVM server1;
-  private static MemberVM server2;
 
   private World world;
   private List<GeodePersistentObjectMapping> registeredMappings;
   private ObjectStore objectStore;
-  private MockObjectResultInterest interest;
   private MockObjectDispatcher dispatcher;
   private GeodeObjectStoreDelegate storeDelegate;
 
@@ -350,9 +372,9 @@ public class GeodeObjectStoreIT {
     serverProps.put(ConfigurationProperties.CACHE_XML_FILE, "server-cache.xml");
     serverProps.put(ConfigurationProperties.LOG_LEVEL, "error");
 
-    locator = cluster.startLocatorVM(0, serverProps);
-    server1 = cluster.startServerVM(1, serverProps, locator.getPort());
-    server2 = cluster.startServerVM(2, serverProps, locator.getPort());
+    MemberVM locator = cluster.startLocatorVM(0, serverProps);
+    MemberVM server1 = cluster.startServerVM(1, serverProps, locator.getPort());
+    MemberVM server2 = cluster.startServerVM(2, serverProps, locator.getPort());
 
     System.setProperty("LOCATOR_IP", ipAddress());
     System.setProperty("LOCATOR_PORT", String.valueOf(locator.getPort()));
@@ -367,7 +389,7 @@ public class GeodeObjectStoreIT {
 
     EntryAdapterProvider.instance(world).registerAdapter(TestEvent.class, new TestEventAdapter());
     final StateAdapterProvider stateAdapterProvider = StateAdapterProvider.instance(world);
-    interest = new MockObjectResultInterest();
+    MockObjectResultInterest interest = new MockObjectResultInterest();
     dispatcher = new MockObjectDispatcher(interest);
     storeDelegate = new GeodeObjectStoreDelegate(world, ConsistencyMode.EVENTUAL, originatorId, stateAdapterProvider);
     objectStore = world.actorFor(

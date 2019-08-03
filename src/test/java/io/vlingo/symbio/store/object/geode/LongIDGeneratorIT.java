@@ -8,8 +8,8 @@ package io.vlingo.symbio.store.object.geode;
 
 import io.vlingo.actors.Definition;
 import io.vlingo.actors.World;
-import io.vlingo.symbio.store.common.geode.functions.ClearRegionFunction;
 import io.vlingo.symbio.store.common.geode.GemFireCacheProvider;
+import io.vlingo.symbio.store.common.geode.functions.ClearRegionFunction;
 import io.vlingo.symbio.store.common.geode.identity.IDGenerator;
 import io.vlingo.symbio.store.common.geode.identity.LongIDGenerator;
 import io.vlingo.symbio.store.common.geode.identity.LongIDGeneratorActor;
@@ -32,16 +32,13 @@ import static org.junit.Assert.assertEquals;
 /**
  * LongIDGeneratorIT
  */
-@SuppressWarnings({"unchecked", "rawtypes"})
+@SuppressWarnings("unchecked")
 public class LongIDGeneratorIT {
 
   private static final Logger LOG = LoggerFactory.getLogger(LongIDGeneratorIT.class);
 
   @ClassRule
   public static ClusterStartupRule cluster = new ClusterStartupRule();
-  private static MemberVM locator;
-  private static MemberVM server1;
-  private static MemberVM server2;
 
   private World world;
 
@@ -90,9 +87,9 @@ public class LongIDGeneratorIT {
     serverProps.put(ConfigurationProperties.CACHE_XML_FILE, "server-cache.xml");
     serverProps.put(ConfigurationProperties.LOG_LEVEL, "error");
 
-    locator = cluster.startLocatorVM(0, serverProps);
-    server1 = cluster.startServerVM(1, serverProps, locator.getPort());
-    server2 = cluster.startServerVM(2, serverProps, locator.getPort());
+    MemberVM locator = cluster.startLocatorVM(0, serverProps);
+    MemberVM server1 = cluster.startServerVM(1, serverProps, locator.getPort());
+    MemberVM server2 = cluster.startServerVM(2, serverProps, locator.getPort());
 
     System.setProperty("LOCATOR_IP", ipAddress());
     System.setProperty("LOCATOR_PORT", String.valueOf(locator.getPort()));
