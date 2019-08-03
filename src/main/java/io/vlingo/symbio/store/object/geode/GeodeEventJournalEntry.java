@@ -1,3 +1,9 @@
+// Copyright © 2012-2018 Vaughn Vernon. All rights reserved.
+//
+// This Source Code Form is subject to the terms of the
+// Mozilla Public License, v. 2.0. If a copy of the MPL
+// was not distributed with this file, You can obtain
+// one at https://mozilla.org/MPL/2.0/.
 package io.vlingo.symbio.store.object.geode;
 
 import io.vlingo.common.serialization.JsonSerialization;
@@ -70,7 +76,7 @@ public class GeodeEventJournalEntry implements Entry<String>, PdxSerializable {
   }
 
   @Override
-  public String type() {
+  public String typeName() {
     return type;
   }
 
@@ -117,19 +123,16 @@ public class GeodeEventJournalEntry implements Entry<String>, PdxSerializable {
       .compare(this, that);
   }
 
-  /* @see java.lang.Object#toString() */
   @Override
   public String toString() {
-    return new StringBuilder()
-      .append("GeodeEventJournalEntry(")
-      .append("id=").append(id)
-      .append(", entryTimestamp=").append(entryTimestamp)
-      .append(", entryData=").append(entryData)
-      .append(", metadata=").append(metadata)
-      .append(", type=").append(type)
-      .append(", typeVersion=").append(typeVersion)
-      .append(")")
-      .toString();
+    return "GeodeEventJournalEntry{" +
+      "id='" + id + '\'' +
+      ", entryTimestamp=" + entryTimestamp +
+      ", entryData='" + entryData + '\'' +
+      ", metadata=" + metadata +
+      ", type='" + type + '\'' +
+      ", typeVersion=" + typeVersion +
+      '}';
   }
 
   @Override

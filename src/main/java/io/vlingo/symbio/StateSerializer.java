@@ -1,7 +1,5 @@
 package io.vlingo.symbio;
 
-import io.vlingo.symbio.Metadata;
-import io.vlingo.symbio.State;
 import org.apache.geode.pdx.PdxReader;
 import org.apache.geode.pdx.PdxSerializationException;
 import org.apache.geode.pdx.PdxSerializer;
@@ -45,8 +43,9 @@ public class StateSerializer implements PdxSerializer {
   }
 
   @Override
+  @SuppressWarnings("unchecked")
   public Object fromData(Class<?> clazz, PdxReader in) {
-    Object result = null;
+    Object result;
     final String id = in.readString("id");
     final int dataVersion = in.readInt("dataVersion");
     final Class<?> type = computeType(in.readString("type"));

@@ -11,7 +11,6 @@ import org.apache.geode.pdx.PdxReader;
 import org.apache.geode.pdx.PdxSerializable;
 import org.apache.geode.pdx.PdxWriter;
 
-import java.io.Serializable;
 import java.util.concurrent.atomic.AtomicLong;
 /**
  * LongIDAllocation represents a monotonically increasing, gapless
@@ -19,9 +18,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * a sequence.
  */
 public class LongIDAllocation implements PdxSerializable {
-  
-  private static final long serialVersionUID = 1L;
-  
+
   private final AtomicLong next;
   private Long last;
 

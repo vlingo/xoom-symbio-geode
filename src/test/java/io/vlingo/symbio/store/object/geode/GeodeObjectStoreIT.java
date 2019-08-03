@@ -114,7 +114,7 @@ public class GeodeObjectStoreIT {
             ListQueryExpression.using(
                     Person.class,
                     "select * from /Person p where p.persistenceId = $1",
-                    Arrays.asList(greenLanternId)),
+                    Collections.singletonList(greenLanternId)),
             queryInterest
     );
 
@@ -188,7 +188,7 @@ public class GeodeObjectStoreIT {
       ListQueryExpression.using(
         Person.class,
         "select * from /Person p where p.persistenceId = $1",
-        Arrays.asList(greenLanternId)),
+        Collections.singletonList(greenLanternId)),
       queryInterest
     );
 
@@ -213,7 +213,7 @@ public class GeodeObjectStoreIT {
       ListQueryExpression.using(
         Person.class,
         "select * from /Person p where p.persistenceId = $1",
-        Arrays.asList(greenLanternId)),
+        Collections.singletonList(greenLanternId)),
       requeryInterest
     );
 

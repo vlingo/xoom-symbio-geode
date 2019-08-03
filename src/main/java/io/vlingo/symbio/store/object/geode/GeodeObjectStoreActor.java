@@ -31,7 +31,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
-
 /**
  * GeodeObjectStoreActor is an {@link ObjectStore} that knows how to
  * read/write {@link PersistentObject} from/to Apache Geode.
@@ -133,9 +132,7 @@ public class GeodeObjectStoreActor extends Actor implements ObjectStore {
       storeDelegate.beginTransaction();
 
       final Collection<State<?>> states = storeDelegate.persistAll(objectsToPersist, updateId, metadata);
-      states.forEach(state -> {
-        dispatchables.add(buildDispatchable(state, entries));
-      });
+      states.forEach(state -> dispatchables.add(buildDispatchable(state, entries)));
 
       storeDelegate.persistEntries(entries);
       dispatchables.forEach(storeDelegate::persistDispatchable);

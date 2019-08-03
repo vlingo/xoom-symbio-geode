@@ -1,3 +1,9 @@
+// Copyright © 2012-2018 Vaughn Vernon. All rights reserved.
+//
+// This Source Code Form is subject to the terms of the
+// Mozilla Public License, v. 2.0. If a copy of the MPL
+// was not distributed with this file, You can obtain
+// one at https://mozilla.org/MPL/2.0/.
 package io.vlingo.symbio.store.common.geode.uow;
 
 import org.apache.geode.cache.Cache;
@@ -13,9 +19,9 @@ import java.util.Optional;
 import java.util.Properties;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-
 /**
- * GeodeUnitOfWorkListener is responsible for
+ * GeodeUnitOfWorkListener is responsible for listening for events
+ * on
  */
 public class GeodeUnitOfWorkListener implements AsyncEventListener {
 
@@ -59,7 +65,6 @@ public class GeodeUnitOfWorkListener implements AsyncEventListener {
           .reduce((result1, result2) -> result1 && result2);
         result = booleanOrNull.isPresent() && booleanOrNull.get();
       } catch (Throwable t) {
-        result = false;
         LOG.error("error processing events, t");
       }
 

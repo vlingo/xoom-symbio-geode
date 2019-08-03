@@ -6,12 +6,10 @@
 // one at https://mozilla.org/MPL/2.0/.
 package io.vlingo.symbio;
 
-import io.vlingo.symbio.Metadata;
 import org.apache.geode.cache.Declarable;
 import org.apache.geode.pdx.PdxReader;
 import org.apache.geode.pdx.PdxSerializer;
 import org.apache.geode.pdx.PdxWriter;
-
 /**
  * MetadataPdxSerializer is responsible for serializing instances of
  * {@link Metadata}. It is necessary to customize the PDX serialization

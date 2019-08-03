@@ -1,3 +1,9 @@
+// Copyright © 2012-2018 Vaughn Vernon. All rights reserved.
+//
+// This Source Code Form is subject to the terms of the
+// Mozilla Public License, v. 2.0. If a copy of the MPL
+// was not distributed with this file, You can obtain
+// one at https://mozilla.org/MPL/2.0/.
 package io.vlingo.symbio.store.common.geode.uow;
 
 import io.vlingo.symbio.Entry;
@@ -124,6 +130,7 @@ public class GeodeUnitOfWork implements PdxSerializable {
   }
 
   @Override
+  @SuppressWarnings("unchecked")
   public void fromData(final PdxReader in) {
     this.id = in.readLong("id");
     this.timestamp = (LocalDate) in.readObject("timestamp");

@@ -46,7 +46,7 @@ public class GemFireCacheProvider {
    * @return a {@link GemFireCache} or null
    */
   public static Optional<GemFireCache> getAnyInstance(final Properties properties) {
-    GemFireCache cache = null;
+    GemFireCache cache;
     try {
       cache = forClient(properties);
     }
@@ -86,7 +86,7 @@ public class GemFireCacheProvider {
    * @return a {@link ClientCache}
    */
   public static ClientCache forClient(final Properties properties) throws CouldNotAccessCacheException {
-    ClientCache clientCache = null;
+    ClientCache clientCache;
     try {
       clientCache = ClientCacheFactory.getAnyInstance();
       LOG.trace("returning EXISTING ClientCache");
@@ -129,7 +129,7 @@ public class GemFireCacheProvider {
    * @return a {@link Cache}
    */
   public static Cache forPeer(Properties properties) throws CouldNotAccessCacheException {
-    Cache serverCache = null;
+    Cache serverCache;
     try {
       serverCache = CacheFactory.getAnyInstance();
       LOG.trace("returning EXISTING server Cache");

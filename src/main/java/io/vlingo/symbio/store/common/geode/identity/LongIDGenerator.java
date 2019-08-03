@@ -6,20 +6,14 @@
 // one at https://mozilla.org/MPL/2.0/.
 package io.vlingo.symbio.store.common.geode.identity;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-
+import io.vlingo.symbio.store.common.geode.GemFireCacheProvider;
 import org.apache.geode.cache.GemFireCache;
 import org.apache.geode.cache.Region;
 import org.apache.geode.cache.execute.FunctionService;
 import org.apache.geode.cache.execute.ResultCollector;
 import org.apache.logging.log4j.util.Strings;
 
-import io.vlingo.symbio.store.common.geode.GemFireCacheProvider;
+import java.util.*;
 /**
  * LongIDGenerator is responsible for generating identifiers of
  * type {@link Long} from a named sequence.
@@ -62,7 +56,7 @@ public class LongIDGenerator {
       this.allocationSize = DEFAULT_ALLOCATION_SIZE;
     else
       this.allocationSize = allocationSize;
-    this.allocationsByName = new HashMap<String, LongIDAllocation>();
+    this.allocationsByName = new HashMap<>();
   }
   
   /**
@@ -122,7 +116,7 @@ public class LongIDGenerator {
   @SuppressWarnings("unchecked")
   private LongIDAllocation computeAllocation(String sequenceName) {
     
-    Set<String> filter = new HashSet<String>();
+    Set<String> filter = new HashSet<>();
     filter.add(sequenceName);
 
     Region<String, LongSequence> region = cache().getRegion(sequenceRegionPath);
@@ -132,7 +126,7 @@ public class LongIDGenerator {
       .setArguments(allocationSize)
       .execute(LongIDAllocator.class.getName());
 
-    List<LongIDAllocation> result = (List<LongIDAllocation>) rc.getResult();
+    List<LongIDAllocation> result = rc.getResult();
     return result.get(0);
   }
   
