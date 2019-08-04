@@ -4,7 +4,7 @@
 // Mozilla Public License, v. 2.0. If a copy of the MPL
 // was not distributed with this file, You can obtain
 // one at https://mozilla.org/MPL/2.0/.
-package io.vlingo.symbio.store.common.geode.uow;
+package io.vlingo.symbio.store.object.geode.uow;
 
 import io.vlingo.symbio.Entry;
 import io.vlingo.symbio.State;

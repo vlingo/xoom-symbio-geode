@@ -51,7 +51,6 @@ import io.vlingo.symbio.store.common.MockObjectDispatcher;
 import io.vlingo.symbio.store.common.event.Event;
 import io.vlingo.symbio.store.common.event.TestEvent;
 import io.vlingo.symbio.store.common.event.TestEventAdapter;
-import io.vlingo.symbio.store.common.geode.ConsistencyMode;
 import io.vlingo.symbio.store.common.geode.GemFireCacheProvider;
 import io.vlingo.symbio.store.common.geode.GeodeQueries;
 import io.vlingo.symbio.store.common.geode.functions.ClearRegionFunction;

@@ -1,4 +1,4 @@
-package io.vlingo.symbio.store.common.geode;
+package io.vlingo.symbio.store.object.geode;
 
 public enum ConsistencyMode {
   EVENTUAL,

@@ -1,4 +1,4 @@
-package io.vlingo.symbio.store.common.geode.uow;
+package io.vlingo.symbio.store.object.geode.uow;
 
 import org.apache.geode.cache.Cache;
 import org.slf4j.Logger;
