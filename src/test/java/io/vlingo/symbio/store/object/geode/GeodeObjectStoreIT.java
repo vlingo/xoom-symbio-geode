@@ -125,7 +125,8 @@ public class GeodeObjectStoreIT {
     assertEquals(1, dispatched.size());
   }
 
-  public void testThatObjectStoreInsertsMultipleAndQueries() {
+  @Test
+  public void testThatObjectStoreInsertsMultipleAndQueries() throws Exception {
     dispatcher.afterCompleting(3);
     final MockPersistResultInterest persistInterest = new MockPersistResultInterest();
     final AccessSafely persistAccess = persistInterest.afterCompleting(1);
@@ -139,6 +140,9 @@ public class GeodeObjectStoreIT {
     final Person theWasp = new Person("The Wasp", 40, 401L);
     final Person ironMan = new Person("Iron Man", 50, 501L);
     objectStore.persistAll(Arrays.asList(greenLantern, theWasp, ironMan), persistInterest);
+
+    /* give GeodeUnitOfWorkListener time to run */
+    Thread.sleep(3000);
 
     assertEquals(Result.Success, persistAccess.readFrom("persistResult"));
     assertEquals(3, (int) persistAccess.readFrom("expectedPersistCount"));
@@ -163,7 +167,8 @@ public class GeodeObjectStoreIT {
     assertEquals("ironMan", ironMan, i.next());
   }
 
-  public void testThatSingleEntityUpdates() {
+  @Test
+  public void testThatSingleEntityUpdates() throws Exception {
     dispatcher.afterCompleting(1);
     final MockPersistResultInterest persistInterest = new MockPersistResultInterest();
     final AccessSafely persistAccess = persistInterest.afterCompleting(1);
@@ -177,6 +182,9 @@ public class GeodeObjectStoreIT {
     final Person greenLantern = new Person("Green Lantern", 30, greenLanternId);
     assertEquals(0L, greenLantern.version());
     objectStore.persist(greenLantern, persistInterest);
+
+    /* give GeodeUnitOfWorkListener time to run */
+    Thread.sleep(3000);
 
     assertEquals(Result.Success, persistAccess.readFrom("persistResult"));
 
@@ -203,6 +211,10 @@ public class GeodeObjectStoreIT {
 
     queriedPerson.withAge(31);
     objectStore.persist(queriedPerson, queryInterest.singleResult.get().updateId, updateInterest);
+
+    /* give GeodeUnitOfWorkListener time to run */
+    Thread.sleep(3000);
+
     assertEquals(Result.Success, updateAccess.readFrom("persistResult"));
 
     final MockQueryResultInterest requeryInterest = new MockQueryResultInterest();
@@ -223,7 +235,8 @@ public class GeodeObjectStoreIT {
     assertEquals(queriedPersonVersion + 1, requeriedPerson.version());
   }
 
-  public void testThatMultipleEntitiesUpdate() {
+  @Test
+  public void testThatMultipleEntitiesUpdate() throws Exception {
     dispatcher.afterCompleting(5);
     final MockPersistResultInterest persistInterest = new MockPersistResultInterest();
     final AccessSafely persistAccess = persistInterest.afterCompleting(1);
@@ -239,6 +252,9 @@ public class GeodeObjectStoreIT {
     final Person theWasp1 = new Person("The Wasp", 40, 403L);
     final Person ironMan1 = new Person("Iron Man", 50, 503L);
     objectStore.persistAll(Arrays.asList(greenLantern1, theWasp1, ironMan1), persistInterest);
+
+    /* give GeodeUnitOfWorkListener time to run */
+    Thread.sleep(3000);
 
     assertEquals(Result.Success, persistAccess.readFrom("persistResult"));
     assertEquals(3, (int) persistAccess.readFrom("expectedPersistCount"));
@@ -287,6 +303,9 @@ public class GeodeObjectStoreIT {
 
     objectStore.persistAll(updatedPeople, updateInterest);
 
+    /* give GeodeUnitOfWorkListener time to run */
+    Thread.sleep(3000);
+
     Exception persistCause = updateAccess.readFrom("persistCause");
     assertNull(persistCause);
     assertEquals(Result.Success, updateAccess.readFrom("persistResult"));
@@ -316,7 +335,8 @@ public class GeodeObjectStoreIT {
     assertEquals("queriedIronMan2.name", queriedIronMan2.name, ironMan2Name);
   }
 
-  public void testRedispatch() {
+  @Test
+  public void testRedispatch() throws Exception {
     final AccessSafely accessDispatcher = dispatcher.afterCompleting(5);
 
     accessDispatcher.writeUsing("processDispatch", false);
@@ -337,6 +357,9 @@ public class GeodeObjectStoreIT {
 
     final List<Source<Event>> sources = Arrays.asList(TestEvent.randomEvent(), TestEvent.randomEvent());
     objectStore.persistAll(Arrays.asList(greenLantern1, theWasp1, ironMan1), sources, persistInterest);
+
+    /* give GeodeUnitOfWorkListener time to run */
+    Thread.sleep(3000);
 
     assertEquals(Result.Success, persistAccess.readFrom("persistResult"));
     assertEquals(3, (int) persistAccess.readFrom("expectedPersistCount"));
