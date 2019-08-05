@@ -21,7 +21,7 @@ public class GeodeUnitOfWorkProcessor implements Callable<Boolean> {
 
   @Override
   public Boolean call() throws Exception {
-    LOG.info("call - entered");
+    LOG.debug("call - entered");
     boolean result = false;
     try {
       try {
@@ -32,7 +32,7 @@ public class GeodeUnitOfWorkProcessor implements Callable<Boolean> {
       }
       return result;
     } finally {
-      LOG.info("call - exited with result=" + result);
+      LOG.debug("call - exited with result=" + result);
     }
   }
 }
