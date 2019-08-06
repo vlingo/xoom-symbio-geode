@@ -1,11 +1,22 @@
+// Copyright © 2012-2018 Vaughn Vernon. All rights reserved.
+//
+// This Source Code Form is subject to the terms of the
+// Mozilla Public License, v. 2.0. If a copy of the MPL
+// was not distributed with this file, You can obtain
+// one at https://mozilla.org/MPL/2.0/.
 package io.vlingo.symbio.store.object.geode.uow;
 
 import org.apache.geode.cache.Cache;
+import org.apache.geode.cache.GemFireCache;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.Callable;
-
+/**
+ * GeodeUnitOfWorkProcessor is responsible for executing the
+ * {@link GeodeUnitOfWork#applyTo(GemFireCache)} operation in
+ * a separate thread.
+ */
 public class GeodeUnitOfWorkProcessor implements Callable<Boolean> {
 
   private static final Logger LOG = LoggerFactory.getLogger(GeodeUnitOfWorkProcessor.class);

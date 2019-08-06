@@ -46,7 +46,7 @@ public class GeodeObjectStoreDelegate extends GeodeDispatcherControlDelegate imp
   
   private final World world;
   private final Logger logger;
-  private final ConsistencyMode consistencyMode;
+  private final ConsistencyPolicy consistencyPolicy;
   private final Map<Class<?>, PersistentObjectMapper> mappers;
   private final StateAdapterProvider stateAdapterProvider;
   private GeodeUnitOfWork unitOfWork;
@@ -54,21 +54,21 @@ public class GeodeObjectStoreDelegate extends GeodeDispatcherControlDelegate imp
 
   public GeodeObjectStoreDelegate(
     final World world,
-    final ConsistencyMode mode,
+    final ConsistencyPolicy consistencyPolicy,
     final String originatorId,
     final StateAdapterProvider stateAdapterProvider)
   {
     super(originatorId);
     this.world = world;
     this.logger = world.defaultLogger();
-    this.consistencyMode = mode;
+    this.consistencyPolicy = consistencyPolicy;
     this.mappers = new HashMap<>();
     this.stateAdapterProvider = stateAdapterProvider;
   }
 
   private GeodeObjectStoreDelegate(
     final World world,
-    final ConsistencyMode mode,
+    final ConsistencyPolicy consistencyPolicy,
     final String originatorId,
     final Map<Class<?>, PersistentObjectMapper> mappers,
     final StateAdapterProvider stateAdapterProvider)
@@ -76,7 +76,7 @@ public class GeodeObjectStoreDelegate extends GeodeDispatcherControlDelegate imp
     super(originatorId);
     this.world = world;
     this.logger = world.defaultLogger();
-    this.consistencyMode = mode;
+    this.consistencyPolicy = consistencyPolicy;
     this.mappers = mappers;
     this.stateAdapterProvider = stateAdapterProvider;
   }
@@ -96,7 +96,7 @@ public class GeodeObjectStoreDelegate extends GeodeDispatcherControlDelegate imp
   public ObjectStoreDelegate copy() {
     return new GeodeObjectStoreDelegate(
       this.world,
-      this.consistencyMode,
+      this.consistencyPolicy,
       getOriginatorId(),
       this.stateAdapterProvider);
   }
@@ -105,7 +105,7 @@ public class GeodeObjectStoreDelegate extends GeodeDispatcherControlDelegate imp
   public void beginTransaction() {
     logger.debug("beginTransaction - entered");
     try {
-      if (consistencyMode.isTransactional()) {
+      if (consistencyPolicy.isTransactional()) { /* not yet supported */
         cache().getCacheTransactionManager().begin();
       }
       this.unitOfWork = new GeodeUnitOfWork();
@@ -123,7 +123,7 @@ public class GeodeObjectStoreDelegate extends GeodeDispatcherControlDelegate imp
         .next(UOW_SEQUENCE_NAME)
         .andThenConsume(id -> {
           unitOfWork.withId(id);
-          if (consistencyMode.isTransactional()) {
+          if (consistencyPolicy.isTransactional()) { /* not yet supported */
             unitOfWork.applyTo(cache());
             cache().getCacheTransactionManager().commit();
           } else {
@@ -141,7 +141,7 @@ public class GeodeObjectStoreDelegate extends GeodeDispatcherControlDelegate imp
     logger.debug("failTransaction - entered");
     try {
       this.unitOfWork = null;
-      if (consistencyMode.isTransactional()) {
+      if (consistencyPolicy.isTransactional()) { /* not yet supported */
         cache().getCacheTransactionManager().rollback();
       }
     }

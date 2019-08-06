@@ -25,11 +25,12 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
 /**
- * GeodeUnitOfWork represents a single persistence uow
+ * GeodeUnitOfWork represents a single persistence unit of work
  * against the Apache Geode Object Store, and is designed to allow atomic
- * storage of the three (sets of) objects (entities, Entries and Dispatchables)
- * that every persist or persistAll operation must write to Geode without
- * the use of a Geode uow. The contained objects are subsequently
+ * storage of three (sets of) objects (entities, Entries and Dispatchables)
+ * in a consistent way without the use of Geode transactions using the
+ * <code>Region.put</code> and <code>Region.putAll</code> operations.
+ * The objects contained in the unit of work are subsequently
  * distributed to their respective regions by an AsyncEventListener.
  */
 public class GeodeUnitOfWork implements PdxSerializable {

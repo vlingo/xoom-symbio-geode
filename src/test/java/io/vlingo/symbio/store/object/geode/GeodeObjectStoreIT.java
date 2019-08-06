@@ -413,7 +413,7 @@ public class GeodeObjectStoreIT {
     final StateAdapterProvider stateAdapterProvider = StateAdapterProvider.instance(world);
     MockObjectResultInterest interest = new MockObjectResultInterest();
     dispatcher = new MockObjectDispatcher(interest);
-    storeDelegate = new GeodeObjectStoreDelegate(world, ConsistencyMode.EVENTUAL, originatorId, stateAdapterProvider);
+    storeDelegate = new GeodeObjectStoreDelegate(world, ConsistencyPolicy.EVENTUAL, originatorId, stateAdapterProvider);
     objectStore = world.actorFor(
             ObjectStore.class,
             Definition.has(

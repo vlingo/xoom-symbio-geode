@@ -19,13 +19,42 @@ import java.util.Optional;
 import java.util.Properties;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 /**
- * GeodeUnitOfWorkListener is responsible for listening for events
- * on
+ * GeodeUnitOfWorkListener is responsible for listening for create events
+ * on the region which stores {@link GeodeUnitOfWork} objects.
+ * <p>
+ * Note that {@link #processEvents(List)} method receives a batch of
+ * {@link AsyncEvent}, each of which represents one {@link GeodeUnitOfWork} that
+ * needs to be processed, and returns a boolean which indicates whether all
+ * the events in the batch were processed correctly.  As long as {@link #processEvents(List)}
+ * returns false, Geode continues to re-try processing the events.
+ * <p>
+ * It is important for the async event queue to be configured as serial, so that
+ * events get processed in order. It is also recommended that the batch size be small.
+ * To protect against loss of events, it is recommended that the async queue be
+ * configured for persistence to a disk store. You may wish to experiment with
+ * configuring multiple dispatcher threads but, if so, ensure that you use the
+ * key ordering policy (since {@link GeodeUnitOfWork} keys are long value that
+ * is allocated out of a single, monotonically-increasing ID sequence.
+ * <p>
+ * Here is a basic example of how to configure this listener (not all options shown):
+ * <pre>
+ *   &lt;async-event-queue id="object-store-uow-queue" persistent="true" disk-store-name="uowStore" parallel="false"&gt;
+ *     &lt;async-event-listener&gt;
+ *       &lt;class-name&gt;io.vlingo.symbio.store.object.geode.uow.GeodeUnitOfWorkListener&lt;/class-name&gt;
+ *     &lt;/async-event-listener&gt;
+ *   &lt;/async-event-queue&gt;
+ * </pre>
+ * For more information on configuring {@link AsyncEventListener}s see the
+ * <a href="https://geode.apache.org/docs/guide/19/developing/events/chapter_overview.html">Events and Event Handling</a>
+ * section of the Apache Geode documentation.
  */
 public class GeodeUnitOfWorkListener implements AsyncEventListener {
 
   private static final Logger LOG = LoggerFactory.getLogger(GeodeUnitOfWorkListener.class);
+  private static final Long INVOKEALL_TIMEOUT_VALUE = 3000L;
+  private static final TimeUnit INVOKEALL_TIMEOUT_UNIT = TimeUnit.MILLISECONDS;
 
   private Cache cache;
 
@@ -53,7 +82,7 @@ public class GeodeUnitOfWorkListener implements AsyncEventListener {
       try {
         ExecutorService executorService = Executors.newSingleThreadExecutor();
         Optional<Boolean> booleanOrNull = executorService
-          .invokeAll(eventProcessors)
+          .invokeAll(eventProcessors, INVOKEALL_TIMEOUT_VALUE, INVOKEALL_TIMEOUT_UNIT)
           .stream()
           .map(future -> {
             try {
