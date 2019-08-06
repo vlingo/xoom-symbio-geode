@@ -4,7 +4,6 @@
 // Mozilla Public License, v. 2.0. If a copy of the MPL
 // was not distributed with this file, You can obtain
 // one at https://mozilla.org/MPL/2.0/.
-
 package io.vlingo.symbio.store.state.geode;
 
 import java.util.List;
@@ -34,37 +33,37 @@ public class GeodeStateStoreEntryReaderActor<T extends Entry<?>> extends Actor i
   }
 
   @Override
-  public Completes<T> readNext(final String fromId) {
-    seekTo(fromId);
-    return readNext();
-  }
-
-  @Override
-  public Completes<List<T>> readNext(final int maximumEntries) {
+  public Completes<T> readNext(String fromId) {
     // TODO Auto-generated method stub
     return null;
   }
 
   @Override
-  public Completes<List<T>> readNext(final String fromId, final int maximumEntries) {
-    seekTo(fromId);
-    return readNext(maximumEntries);
+  public Completes<List<T>> readNext(int maximumEntries) {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+  @Override
+  public Completes<List<T>> readNext(String fromId, int maximumEntries) {
+    // TODO Auto-generated method stub
+    return null;
   }
 
   @Override
   public void rewind() {
     // TODO Auto-generated method stub
-
   }
 
   @Override
-  public Completes<String> seekTo(final String id) {
+  public Completes<String> seekTo(String id) {
     // TODO Auto-generated method stub
     return null;
   }
 
   @Override
   public Completes<Long> size() {
+    // TODO Auto-generated method stub
     return null;
   }
 }

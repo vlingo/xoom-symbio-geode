@@ -10,10 +10,16 @@
 	<pdx>
 		<pdx-serializer>
 			<class-name>io.vlingo.symbio.store.common.geode.pdx.DynaPdxSerializer</class-name>
+			<parameter name="provider">
+				<string>io.vlingo.symbio.store.common.geode.pdx.TestPdxSerializerProvider</string>
+			</parameter>
 		</pdx-serializer>
 	</pdx>
-	<region name="vlingo-dispatchables" refid="PROXY" />
+	<region name="IdSequences" refid="PROXY" />
+	<region name="Dispatchables" refid="PROXY" />
+	<region name="ObjectStoreEventJournal" refid="PROXY" />
+	<region name="ObjectStoreUnitsOfWork" refid="PROXY" />
+	<region name="StateStoreEventJournal" refid="PROXY" />
 	<region name="Entity1" refid="PROXY" />
 	<region name="Person" refid="PROXY" />
-	<region name="IdSequences" refid="PROXY" />
 </client-cache>

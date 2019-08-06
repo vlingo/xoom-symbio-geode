@@ -7,17 +7,18 @@
 
 package io.vlingo.symbio.store.common.geode.identity;
 
-import java.io.Serializable;
+import org.apache.geode.pdx.PdxReader;
+import org.apache.geode.pdx.PdxSerializable;
+import org.apache.geode.pdx.PdxWriter;
+
 import java.util.concurrent.atomic.AtomicLong;
 /**
  * LongIDAllocation represents a monotonically increasing, gapless
  * block of Long valued identifiers that have been allocated from
  * a sequence.
  */
-public class LongIDAllocation implements Serializable {
-  
-  private static final long serialVersionUID = 1L;
-  
+public class LongIDAllocation implements PdxSerializable {
+
   private final AtomicLong next;
   private Long last;
 
@@ -60,5 +61,18 @@ public class LongIDAllocation implements Serializable {
   public boolean hasNext()
   {
       return next.longValue() <= last;
+  }
+
+  @Override
+  public void toData(PdxWriter out) {
+    out
+      .writeLong("next", next.longValue())
+      .writeLong("last", last);
+  }
+
+  @Override
+  public void fromData(PdxReader in) {
+    next.set(in.readLong("next"));
+    this.last = in.readLong("last");
   }
 }

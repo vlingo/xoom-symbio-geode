@@ -5,7 +5,7 @@
 // was not distributed with this file, You can obtain
 // one at https://mozilla.org/MPL/2.0/.
 
-package io.vlingo.symbio.store.common.geode;
+package io.vlingo.symbio.store.common.geode.functions;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -48,7 +48,7 @@ public class ClearRegionFunction implements Function, Declarable {
         if (numLocalEntries <= BATCH_SIZE) {
             localRegion.removeAll(localRegion.keySet());
         } else {
-            final List<Object> buffer = new ArrayList<Object>(BATCH_SIZE);
+            final List<Object> buffer = new ArrayList<>(BATCH_SIZE);
             int count = 0;
             for (final Object k : localRegion.keySet()) {
                 buffer.add(k);
@@ -57,8 +57,6 @@ public class ClearRegionFunction implements Function, Declarable {
                     localRegion.removeAll(buffer);
                     buffer.clear();
                     count = 0;
-                } else {
-                    continue;
                 }
             }
             localRegion.removeAll(buffer);

@@ -42,7 +42,7 @@ import io.vlingo.symbio.store.Result;
 import io.vlingo.symbio.store.common.MockObjectDispatcher;
 import io.vlingo.symbio.store.common.event.TestEvent;
 import io.vlingo.symbio.store.common.event.TestEventAdapter;
-import io.vlingo.symbio.store.common.geode.ClearRegionFunction;
+import io.vlingo.symbio.store.common.geode.functions.ClearRegionFunction;
 import io.vlingo.symbio.store.common.geode.GemFireCacheProvider;
 import io.vlingo.symbio.store.common.geode.GeodeQueries;
 import io.vlingo.symbio.store.state.Entity1;
@@ -59,19 +59,11 @@ public class GeodeStateStoreActorIT {
 
   @ClassRule
   public static ClusterStartupRule cluster = new ClusterStartupRule();
-  private static MemberVM locator;
-  @SuppressWarnings("unused")
-  private static MemberVM server1;
-  @SuppressWarnings("unused")
-  private static MemberVM server2;
 
   private MockObjectDispatcher dispatcher;
   private MockObjectResultInterest interest;
   private StateStore store;
-  private TestWorld testWorld;
   private World world;
-  private EntryAdapterProvider entryAdapterProvider;
-  private StateAdapterProvider stateAdapterProvider;
 
   @Test
   public void testThatStateStoreWritesText() {
@@ -310,9 +302,9 @@ public class GeodeStateStoreActorIT {
     serverProps.put(ConfigurationProperties.CACHE_XML_FILE, "server-cache.xml");
     serverProps.put(ConfigurationProperties.LOG_LEVEL, "error");
 
-    locator = cluster.startLocatorVM(0, serverProps);
-    server1 = cluster.startServerVM(1, serverProps, locator.getPort());
-    server2 = cluster.startServerVM(2, serverProps, locator.getPort());
+    MemberVM locator = cluster.startLocatorVM(0, serverProps);
+    MemberVM server1 = cluster.startServerVM(1, serverProps, locator.getPort());
+    MemberVM server2 = cluster.startServerVM(2, serverProps, locator.getPort());
 
     System.setProperty("LOCATOR_IP", ipAddress());
     System.setProperty("LOCATOR_PORT", String.valueOf(locator.getPort()));
@@ -323,7 +315,7 @@ public class GeodeStateStoreActorIT {
 
   @Before
   public void beforeEachTest() {
-    testWorld = TestWorld.startWithDefaults("test-store");
+    TestWorld testWorld = TestWorld.startWithDefaults("test-store");
     world = testWorld.world();
 
     interest = new MockObjectResultInterest();
@@ -333,9 +325,9 @@ public class GeodeStateStoreActorIT {
     final long checkConfirmationExpirationInterval = 1000L;
     final long confirmationExpiration = 1000L;
 
-    stateAdapterProvider = new StateAdapterProvider(world);
+    StateAdapterProvider stateAdapterProvider = new StateAdapterProvider(world);
     stateAdapterProvider.registerAdapter(Entity1.class, new Entity1StateAdapter());
-    entryAdapterProvider = EntryAdapterProvider.instance(world);
+    EntryAdapterProvider entryAdapterProvider = EntryAdapterProvider.instance(world);
     entryAdapterProvider.registerAdapter(TestEvent.class, new TestEventAdapter());
     new EntryAdapterProvider(world); //entryAdapterProvider =
 

@@ -51,11 +51,9 @@ import io.vlingo.symbio.store.common.MockObjectDispatcher;
 import io.vlingo.symbio.store.common.event.Event;
 import io.vlingo.symbio.store.common.event.TestEvent;
 import io.vlingo.symbio.store.common.event.TestEventAdapter;
-import io.vlingo.symbio.store.common.geode.ClearRegionFunction;
 import io.vlingo.symbio.store.common.geode.GemFireCacheProvider;
 import io.vlingo.symbio.store.common.geode.GeodeQueries;
-import io.vlingo.symbio.store.common.geode.pdx.PdxSerializerRegistry;
-import io.vlingo.symbio.store.common.geode.pdx.PersonSerializer;
+import io.vlingo.symbio.store.common.geode.functions.ClearRegionFunction;
 import io.vlingo.symbio.store.dispatch.Dispatchable;
 import io.vlingo.symbio.store.object.ListQueryExpression;
 import io.vlingo.symbio.store.object.ObjectStore;
@@ -75,21 +73,15 @@ public class GeodeObjectStoreIT {
 
   @ClassRule
   public static ClusterStartupRule cluster = new ClusterStartupRule();
-  private static MemberVM locator;
-  @SuppressWarnings("unused")
-  private static MemberVM server1;
-  @SuppressWarnings("unused")
-  private static MemberVM server2;
 
   private World world;
   private List<GeodePersistentObjectMapping> registeredMappings;
   private ObjectStore objectStore;
-  private MockObjectResultInterest interest;
   private MockObjectDispatcher dispatcher;
   private GeodeObjectStoreDelegate storeDelegate;
 
   @Test
-  public void testThatObjectStoreInsertsOneAndQueries() {
+  public void testThatObjectStoreInsertsOneAndQueries() throws Exception {
     dispatcher.afterCompleting(1);
     final MockPersistResultInterest persistInterest = new MockPersistResultInterest();
     final AccessSafely persistAccess = persistInterest.afterCompleting(1);
@@ -103,6 +95,9 @@ public class GeodeObjectStoreIT {
     final Person greenLantern = new Person("Green Lantern", 30, greenLanternId);
     assertEquals(0L, greenLantern.version());
     objectStore.persist(greenLantern, Collections.singletonList(TestEvent.randomEvent()), persistInterest);
+
+    /* give GeodeUnitOfWorkListener time to run */
+    Thread.sleep(3000);
 
     final Person storedGreenLantern = persistAccess.readFrom("persistedObject");
     assertEquals(Result.Success, persistAccess.readFrom("persistResult"));
@@ -118,7 +113,7 @@ public class GeodeObjectStoreIT {
             ListQueryExpression.using(
                     Person.class,
                     "select * from /Person p where p.persistenceId = $1",
-                    Arrays.asList(greenLanternId)),
+                    Collections.singletonList(greenLanternId)),
             queryInterest
     );
 
@@ -131,7 +126,7 @@ public class GeodeObjectStoreIT {
   }
 
   @Test
-  public void testThatObjectStoreInsertsMultipleAndQueries() {
+  public void testThatObjectStoreInsertsMultipleAndQueries() throws Exception {
     dispatcher.afterCompleting(3);
     final MockPersistResultInterest persistInterest = new MockPersistResultInterest();
     final AccessSafely persistAccess = persistInterest.afterCompleting(1);
@@ -145,6 +140,9 @@ public class GeodeObjectStoreIT {
     final Person theWasp = new Person("The Wasp", 40, 401L);
     final Person ironMan = new Person("Iron Man", 50, 501L);
     objectStore.persistAll(Arrays.asList(greenLantern, theWasp, ironMan), persistInterest);
+
+    /* give GeodeUnitOfWorkListener time to run */
+    Thread.sleep(3000);
 
     assertEquals(Result.Success, persistAccess.readFrom("persistResult"));
     assertEquals(3, (int) persistAccess.readFrom("expectedPersistCount"));
@@ -170,7 +168,7 @@ public class GeodeObjectStoreIT {
   }
 
   @Test
-  public void testThatSingleEntityUpdates() {
+  public void testThatSingleEntityUpdates() throws Exception {
     dispatcher.afterCompleting(1);
     final MockPersistResultInterest persistInterest = new MockPersistResultInterest();
     final AccessSafely persistAccess = persistInterest.afterCompleting(1);
@@ -185,6 +183,9 @@ public class GeodeObjectStoreIT {
     assertEquals(0L, greenLantern.version());
     objectStore.persist(greenLantern, persistInterest);
 
+    /* give GeodeUnitOfWorkListener time to run */
+    Thread.sleep(3000);
+
     assertEquals(Result.Success, persistAccess.readFrom("persistResult"));
 
     final MockQueryResultInterest queryInterest = new MockQueryResultInterest();
@@ -194,7 +195,7 @@ public class GeodeObjectStoreIT {
       ListQueryExpression.using(
         Person.class,
         "select * from /Person p where p.persistenceId = $1",
-        Arrays.asList(greenLanternId)),
+        Collections.singletonList(greenLanternId)),
       queryInterest
     );
 
@@ -210,6 +211,10 @@ public class GeodeObjectStoreIT {
 
     queriedPerson.withAge(31);
     objectStore.persist(queriedPerson, queryInterest.singleResult.get().updateId, updateInterest);
+
+    /* give GeodeUnitOfWorkListener time to run */
+    Thread.sleep(3000);
+
     assertEquals(Result.Success, updateAccess.readFrom("persistResult"));
 
     final MockQueryResultInterest requeryInterest = new MockQueryResultInterest();
@@ -219,7 +224,7 @@ public class GeodeObjectStoreIT {
       ListQueryExpression.using(
         Person.class,
         "select * from /Person p where p.persistenceId = $1",
-        Arrays.asList(greenLanternId)),
+        Collections.singletonList(greenLanternId)),
       requeryInterest
     );
 
@@ -231,9 +236,7 @@ public class GeodeObjectStoreIT {
   }
 
   @Test
-  public void testThatMultipleEntitiesUpdate() {
-//    clearEntities(GemFireCacheProvider.getAnyInstance().get());
-
+  public void testThatMultipleEntitiesUpdate() throws Exception {
     dispatcher.afterCompleting(5);
     final MockPersistResultInterest persistInterest = new MockPersistResultInterest();
     final AccessSafely persistAccess = persistInterest.afterCompleting(1);
@@ -249,6 +252,9 @@ public class GeodeObjectStoreIT {
     final Person theWasp1 = new Person("The Wasp", 40, 403L);
     final Person ironMan1 = new Person("Iron Man", 50, 503L);
     objectStore.persistAll(Arrays.asList(greenLantern1, theWasp1, ironMan1), persistInterest);
+
+    /* give GeodeUnitOfWorkListener time to run */
+    Thread.sleep(3000);
 
     assertEquals(Result.Success, persistAccess.readFrom("persistResult"));
     assertEquals(3, (int) persistAccess.readFrom("expectedPersistCount"));
@@ -297,6 +303,9 @@ public class GeodeObjectStoreIT {
 
     objectStore.persistAll(updatedPeople, updateInterest);
 
+    /* give GeodeUnitOfWorkListener time to run */
+    Thread.sleep(3000);
+
     Exception persistCause = updateAccess.readFrom("persistCause");
     assertNull(persistCause);
     assertEquals(Result.Success, updateAccess.readFrom("persistResult"));
@@ -327,7 +336,7 @@ public class GeodeObjectStoreIT {
   }
 
   @Test
-  public void testRedispatch() {
+  public void testRedispatch() throws Exception {
     final AccessSafely accessDispatcher = dispatcher.afterCompleting(5);
 
     accessDispatcher.writeUsing("processDispatch", false);
@@ -348,6 +357,9 @@ public class GeodeObjectStoreIT {
 
     final List<Source<Event>> sources = Arrays.asList(TestEvent.randomEvent(), TestEvent.randomEvent());
     objectStore.persistAll(Arrays.asList(greenLantern1, theWasp1, ironMan1), sources, persistInterest);
+
+    /* give GeodeUnitOfWorkListener time to run */
+    Thread.sleep(3000);
 
     assertEquals(Result.Success, persistAccess.readFrom("persistResult"));
     assertEquals(3, (int) persistAccess.readFrom("expectedPersistCount"));
@@ -382,9 +394,9 @@ public class GeodeObjectStoreIT {
     serverProps.put(ConfigurationProperties.CACHE_XML_FILE, "server-cache.xml");
     serverProps.put(ConfigurationProperties.LOG_LEVEL, "error");
 
-    locator = cluster.startLocatorVM(0, serverProps);
-    server1 = cluster.startServerVM(1, serverProps, locator.getPort());
-    server2 = cluster.startServerVM(2, serverProps, locator.getPort());
+    MemberVM locator = cluster.startLocatorVM(0, serverProps);
+    MemberVM server1 = cluster.startServerVM(1, serverProps, locator.getPort());
+    MemberVM server2 = cluster.startServerVM(2, serverProps, locator.getPort());
 
     System.setProperty("LOCATOR_IP", ipAddress());
     System.setProperty("LOCATOR_PORT", String.valueOf(locator.getPort()));
@@ -394,20 +406,19 @@ public class GeodeObjectStoreIT {
 
   @Before
   public void beforeEachTest() {
-    PdxSerializerRegistry.serializeTypeWith(Person.class, PersonSerializer.class);
-
     world = World.startWithDefaults("test-world");
     final String originatorId = "TEST";
 
     EntryAdapterProvider.instance(world).registerAdapter(TestEvent.class, new TestEventAdapter());
     final StateAdapterProvider stateAdapterProvider = StateAdapterProvider.instance(world);
-    interest = new MockObjectResultInterest();
+    MockObjectResultInterest interest = new MockObjectResultInterest();
     dispatcher = new MockObjectDispatcher(interest);
-    storeDelegate = new GeodeObjectStoreDelegate(originatorId, stateAdapterProvider, world.defaultLogger());
+    storeDelegate = new GeodeObjectStoreDelegate(world, ConsistencyMode.EVENTUAL, originatorId, stateAdapterProvider);
     objectStore = world.actorFor(
             ObjectStore.class,
-            Definition.has(GeodeObjectStoreActor.class,
-                    Definition.parameters(originatorId, storeDelegate, dispatcher))
+            Definition.has(
+              GeodeObjectStoreActor.class,
+              Definition.parameters(originatorId, storeDelegate, dispatcher))
     );
     registeredMappings = new ArrayList<>();
   }
@@ -438,7 +449,7 @@ public class GeodeObjectStoreIT {
 
   private void clearEntities(GemFireCache cache) {
     for (GeodePersistentObjectMapping mapping : registeredMappings) {
-      Region<Long, PersistentObject> region = cache.getRegion(mapping.regionName);
+      Region<Long, PersistentObject> region = cache.getRegion(mapping.regionPath);
       if (region != null) {
         FunctionService
           .onRegion(region)

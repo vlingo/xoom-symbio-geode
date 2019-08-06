@@ -6,34 +6,29 @@
 // one at https://mozilla.org/MPL/2.0/.
 package io.vlingo.symbio.store.object.geode;
 
-import static org.junit.Assert.assertEquals;
-
-import java.net.InetAddress;
-import java.util.Optional;
-import java.util.Properties;
-
+import io.vlingo.actors.Definition;
+import io.vlingo.actors.World;
+import io.vlingo.symbio.store.common.geode.GemFireCacheProvider;
+import io.vlingo.symbio.store.common.geode.functions.ClearRegionFunction;
+import io.vlingo.symbio.store.common.geode.identity.IDGenerator;
+import io.vlingo.symbio.store.common.geode.identity.LongIDGenerator;
+import io.vlingo.symbio.store.common.geode.identity.LongIDGeneratorActor;
+import io.vlingo.symbio.store.common.geode.identity.LongSequence;
 import org.apache.geode.cache.GemFireCache;
 import org.apache.geode.cache.Region;
 import org.apache.geode.cache.execute.FunctionService;
 import org.apache.geode.distributed.ConfigurationProperties;
 import org.apache.geode.test.dunit.rules.ClusterStartupRule;
 import org.apache.geode.test.dunit.rules.MemberVM;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.junit.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.vlingo.actors.Definition;
-import io.vlingo.actors.World;
-import io.vlingo.symbio.store.common.geode.ClearRegionFunction;
-import io.vlingo.symbio.store.common.geode.GemFireCacheProvider;
-import io.vlingo.symbio.store.common.geode.identity.IDGenerator;
-import io.vlingo.symbio.store.common.geode.identity.LongIDGenerator;
-import io.vlingo.symbio.store.common.geode.identity.LongIDGeneratorActor;
-import io.vlingo.symbio.store.common.geode.identity.LongSequence;
+import java.net.InetAddress;
+import java.util.Optional;
+import java.util.Properties;
+
+import static org.junit.Assert.assertEquals;
 /**
  * LongIDGeneratorIT
  */
@@ -44,11 +39,6 @@ public class LongIDGeneratorIT {
 
   @ClassRule
   public static ClusterStartupRule cluster = new ClusterStartupRule();
-  private static MemberVM locator;
-  @SuppressWarnings("unused")
-  private static MemberVM server1;
-  @SuppressWarnings("unused")
-  private static MemberVM server2;
 
   private World world;
 
@@ -97,9 +87,9 @@ public class LongIDGeneratorIT {
     serverProps.put(ConfigurationProperties.CACHE_XML_FILE, "server-cache.xml");
     serverProps.put(ConfigurationProperties.LOG_LEVEL, "error");
 
-    locator = cluster.startLocatorVM(0, serverProps);
-    server1 = cluster.startServerVM(1, serverProps, locator.getPort());
-    server2 = cluster.startServerVM(2, serverProps, locator.getPort());
+    MemberVM locator = cluster.startLocatorVM(0, serverProps);
+    MemberVM server1 = cluster.startServerVM(1, serverProps, locator.getPort());
+    MemberVM server2 = cluster.startServerVM(2, serverProps, locator.getPort());
 
     System.setProperty("LOCATOR_IP", ipAddress());
     System.setProperty("LOCATOR_PORT", String.valueOf(locator.getPort()));
