@@ -6,13 +6,26 @@
 // one at https://mozilla.org/MPL/2.0/.
 package io.vlingo.symbio.store.object.geode;
 
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.stream.Collectors;
+
 import io.vlingo.actors.Actor;
 import io.vlingo.actors.Definition;
 import io.vlingo.actors.Logger;
+import io.vlingo.common.Completes;
 import io.vlingo.common.Failure;
 import io.vlingo.common.Success;
 import io.vlingo.common.serialization.JsonSerialization;
-import io.vlingo.symbio.*;
+import io.vlingo.symbio.Entry;
+import io.vlingo.symbio.EntryAdapterProvider;
+import io.vlingo.symbio.Metadata;
+import io.vlingo.symbio.Source;
+import io.vlingo.symbio.State;
+import io.vlingo.symbio.store.EntryReader;
 import io.vlingo.symbio.store.Result;
 import io.vlingo.symbio.store.StorageException;
 import io.vlingo.symbio.store.common.geode.dispatch.GeodeDispatchable;
@@ -24,13 +37,6 @@ import io.vlingo.symbio.store.object.ObjectStore;
 import io.vlingo.symbio.store.object.ObjectStoreDelegate;
 import io.vlingo.symbio.store.object.PersistentObject;
 import io.vlingo.symbio.store.object.QueryExpression;
-
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.stream.Collectors;
 /**
  * GeodeObjectStoreActor is an {@link ObjectStore} that knows how to
  * read/write {@link PersistentObject} from/to Apache Geode.
@@ -87,6 +93,11 @@ public class GeodeObjectStoreActor extends Actor implements ObjectStore {
     }
   }
 
+  @Override
+  public Completes<EntryReader<? extends Entry<?>>> entryReader(final String name) {
+    // TODO: Dave, please see io.vlingo.symbio.store.object.jdbc.jpa.JPAObjectStoreActor#entryReader()
+    return null;
+  }
 
   @Override
   public <T extends PersistentObject, E> void persist(final T objectToPersist, final List<Source<E>> sources, final Metadata metadata, final long updateId,
