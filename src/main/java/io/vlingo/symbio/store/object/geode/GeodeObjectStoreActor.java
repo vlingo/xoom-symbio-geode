@@ -35,11 +35,11 @@ import io.vlingo.symbio.store.dispatch.DispatcherControl;
 import io.vlingo.symbio.store.dispatch.control.DispatcherControlActor;
 import io.vlingo.symbio.store.object.ObjectStore;
 import io.vlingo.symbio.store.object.ObjectStoreDelegate;
-import io.vlingo.symbio.store.object.PersistentObject;
+import io.vlingo.symbio.store.object.StateObject;
 import io.vlingo.symbio.store.object.QueryExpression;
 /**
  * GeodeObjectStoreActor is an {@link ObjectStore} that knows how to
- * read/write {@link PersistentObject} from/to Apache Geode.
+ * read/write {@link StateObject} from/to Apache Geode.
  */
 public class GeodeObjectStoreActor extends Actor implements ObjectStore {
 
@@ -100,7 +100,7 @@ public class GeodeObjectStoreActor extends Actor implements ObjectStore {
   }
 
   @Override
-  public <T extends PersistentObject, E> void persist(final T objectToPersist, final List<Source<E>> sources, final Metadata metadata, final long updateId,
+  public <T extends StateObject, E> void persist(final T objectToPersist, final List<Source<E>> sources, final Metadata metadata, final long updateId,
                                                       final PersistResultInterest interest, final Object object) {
     try {
       storeDelegate.beginTransaction();
@@ -134,7 +134,7 @@ public class GeodeObjectStoreActor extends Actor implements ObjectStore {
   }
 
   @Override
-  public <T extends PersistentObject, E> void persistAll(final Collection<T> objectsToPersist, final List<Source<E>> sources, final Metadata metadata,
+  public <T extends StateObject, E> void persistAll(final Collection<T> objectsToPersist, final List<Source<E>> sources, final Metadata metadata,
                                                          final long updateId, final PersistResultInterest interest, final Object object) {
     try {
       final List<Entry<?>> entries = entryAdapterProvider.asEntries(sources, metadata);
