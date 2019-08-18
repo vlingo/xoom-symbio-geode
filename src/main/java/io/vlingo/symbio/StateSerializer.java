@@ -8,6 +8,7 @@ import org.apache.geode.pdx.PdxWriter;
 public class StateSerializer implements PdxSerializer {
 
   @Override
+  @SuppressWarnings("rawtypes")
   public boolean toData(Object o, PdxWriter out) {
     boolean result = false;
     if (o instanceof State) {
@@ -43,7 +44,7 @@ public class StateSerializer implements PdxSerializer {
   }
 
   @Override
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings({ "unchecked", "rawtypes" })
   public Object fromData(Class<?> clazz, PdxReader in) {
     Object result;
     final String id = in.readString("id");

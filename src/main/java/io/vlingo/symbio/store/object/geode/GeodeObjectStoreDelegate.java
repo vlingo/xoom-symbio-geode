@@ -26,7 +26,7 @@ import io.vlingo.symbio.store.object.ObjectStoreDelegate;
 import io.vlingo.symbio.store.object.ObjectStoreReader.QueryMultiResults;
 import io.vlingo.symbio.store.object.ObjectStoreReader.QuerySingleResult;
 import io.vlingo.symbio.store.object.StateObject;
-import io.vlingo.symbio.store.object.PersistentObjectMapper;
+import io.vlingo.symbio.store.object.StateObjectMapper;
 import io.vlingo.symbio.store.object.QueryExpression;
 import org.apache.geode.cache.GemFireCache;
 import org.apache.geode.cache.Region;
@@ -47,7 +47,7 @@ public class GeodeObjectStoreDelegate extends GeodeDispatcherControlDelegate imp
   private final World world;
   private final Logger logger;
   private final ConsistencyPolicy consistencyPolicy;
-  private final Map<Class<?>, PersistentObjectMapper> mappers;
+  private final Map<Class<?>, StateObjectMapper> mappers;
   private final StateAdapterProvider stateAdapterProvider;
   private GeodeUnitOfWork unitOfWork;
   private IDGenerator<Long> idGenerator;
@@ -70,7 +70,7 @@ public class GeodeObjectStoreDelegate extends GeodeDispatcherControlDelegate imp
     final World world,
     final ConsistencyPolicy consistencyPolicy,
     final String originatorId,
-    final Map<Class<?>, PersistentObjectMapper> mappers,
+    final Map<Class<?>, StateObjectMapper> mappers,
     final StateAdapterProvider stateAdapterProvider)
   {
     super(originatorId);
@@ -82,7 +82,7 @@ public class GeodeObjectStoreDelegate extends GeodeDispatcherControlDelegate imp
   }
 
   @Override
-  public void registerMapper(final PersistentObjectMapper mapper) {
+  public void registerMapper(final StateObjectMapper mapper) {
     mappers.put(mapper.type(), mapper);
   }
 
@@ -314,7 +314,7 @@ public class GeodeObjectStoreDelegate extends GeodeDispatcherControlDelegate imp
   }
 
   private GeodePersistentObjectMapping persistMappingFor(final Class<?> type) throws StorageException {
-    final PersistentObjectMapper mapper = mappers.get(type);
+    final StateObjectMapper mapper = mappers.get(type);
     if (mapper == null) {
       throw new StorageException(Result.Error, "PersistentObjectMapper is not configured for type: " + type.getName());
     }

@@ -59,9 +59,9 @@ import io.vlingo.symbio.store.object.ListQueryExpression;
 import io.vlingo.symbio.store.object.ObjectStore;
 import io.vlingo.symbio.store.object.ObjectStoreReader.QueryMultiResults;
 import io.vlingo.symbio.store.object.ObjectStoreReader.QuerySingleResult;
-import io.vlingo.symbio.store.object.StateObject;
-import io.vlingo.symbio.store.object.PersistentObjectMapper;
 import io.vlingo.symbio.store.object.QueryExpression;
+import io.vlingo.symbio.store.object.StateObject;
+import io.vlingo.symbio.store.object.StateObjectMapper;
 import io.vlingo.symbio.store.state.MockObjectResultInterest;
 /**
  * GeodeObjectStoreIT implements
@@ -88,7 +88,7 @@ public class GeodeObjectStoreIT {
 
     GeodePersistentObjectMapping personMapping = new GeodePersistentObjectMapping(PERSON_REGION_PATH);
     registeredMappings.add(personMapping);
-    PersistentObjectMapper personMapper = PersistentObjectMapper.with(Person.class, personMapping, personMapping);
+    StateObjectMapper personMapper = StateObjectMapper.with(Person.class, personMapping, personMapping);
     storeDelegate.registerMapper(personMapper);
 
     final long greenLanternId = 300L;
@@ -119,7 +119,7 @@ public class GeodeObjectStoreIT {
 
     final QuerySingleResult querySingleResult = queryAccess.readFrom("singleResult");
     assertNotNull(querySingleResult);
-    assertEquals(greenLantern, querySingleResult.persistentObject);
+    assertEquals(greenLantern, querySingleResult.stateObject);
 
     final Map<String, Dispatchable<Entry<?>, State<?>>> dispatched = dispatcher.getDispatched();
     assertEquals(1, dispatched.size());
@@ -133,7 +133,7 @@ public class GeodeObjectStoreIT {
 
     GeodePersistentObjectMapping personMapping = new GeodePersistentObjectMapping(PERSON_REGION_PATH);
     registeredMappings.add(personMapping);
-    PersistentObjectMapper personMapper = PersistentObjectMapper.with(Person.class, personMapping, personMapping);
+    StateObjectMapper personMapper = StateObjectMapper.with(Person.class, personMapping, personMapping);
     storeDelegate.registerMapper(personMapper);
 
     final Person greenLantern = new Person("Green Lantern", 30, 301L);
@@ -160,8 +160,8 @@ public class GeodeObjectStoreIT {
 
     final QueryMultiResults queryMultiResults = queryAccess.readFrom("multiResults");
     assertNotNull(queryMultiResults);
-    assertEquals("persistentObject.size", 3, queryMultiResults.persistentObjects.size());
-    final Iterator<?> i = queryMultiResults.persistentObjects.iterator();
+    assertEquals("persistentObject.size", 3, queryMultiResults.stateObjects.size());
+    final Iterator<?> i = queryMultiResults.stateObjects.iterator();
     assertEquals("greenLantern", greenLantern, i.next());
     assertEquals("theWasp", theWasp, i.next());
     assertEquals("ironMan", ironMan, i.next());
@@ -175,7 +175,7 @@ public class GeodeObjectStoreIT {
 
     GeodePersistentObjectMapping personMapping = new GeodePersistentObjectMapping(PERSON_REGION_PATH);
     registeredMappings.add(personMapping);
-    PersistentObjectMapper personMapper = PersistentObjectMapper.with(Person.class, personMapping, personMapping);
+    StateObjectMapper personMapper = StateObjectMapper.with(Person.class, personMapping, personMapping);
     storeDelegate.registerMapper(personMapper);
 
     final long greenLanternId = 302L;
@@ -201,7 +201,7 @@ public class GeodeObjectStoreIT {
 
     final QuerySingleResult querySingleResult = queryAccess.readFrom("singleResult");
     assertNotNull(querySingleResult);
-    final Person queriedPerson = (Person) querySingleResult.persistentObject;
+    final Person queriedPerson = (Person) querySingleResult.stateObject;
     assertEquals(greenLantern, queriedPerson);
 
     final long queriedPersonVersion = queriedPerson.version();
@@ -230,7 +230,7 @@ public class GeodeObjectStoreIT {
 
     final QuerySingleResult requerySingleResult = requeryAccess.readFrom("singleResult");
     assertNotNull(requerySingleResult);
-    final Person requeriedPerson = (Person) requerySingleResult.persistentObject;
+    final Person requeriedPerson = (Person) requerySingleResult.stateObject;
     assertEquals(greenLantern, requeriedPerson);
     assertEquals(queriedPersonVersion + 1, requeriedPerson.version());
   }
@@ -243,7 +243,7 @@ public class GeodeObjectStoreIT {
 
     GeodePersistentObjectMapping personMapping = new GeodePersistentObjectMapping(PERSON_REGION_PATH);
     registeredMappings.add(personMapping);
-    PersistentObjectMapper personMapper = PersistentObjectMapper.with(Person.class, personMapping, personMapping);
+    StateObjectMapper personMapper = StateObjectMapper.with(Person.class, personMapping, personMapping);
     storeDelegate.registerMapper(personMapper);
 
     /* insert */
@@ -272,8 +272,8 @@ public class GeodeObjectStoreIT {
 
     final QueryMultiResults queryMultiResults = queryAccess.readFrom("multiResults");
     assertNotNull(queryMultiResults);
-    assertEquals("query result set size after insert", 3, queryMultiResults.persistentObjects.size());
-    final Iterator<?> i = queryMultiResults.persistentObjects.iterator();
+    assertEquals("query result set size after insert", 3, queryMultiResults.stateObjects.size());
+    final Iterator<?> i = queryMultiResults.stateObjects.iterator();
     final Person queriedGreenLantern1 = (Person) i.next();
     assertEquals("greenLantern", greenLantern1, queriedGreenLantern1);
     final Person queriedTheWasp1 = (Person) i.next();
@@ -322,8 +322,8 @@ public class GeodeObjectStoreIT {
 
     final QueryMultiResults requeryMultiResults = requeryAccess.readFrom("multiResults");
     assertNotNull(requeryMultiResults);
-    assertEquals("query result set size after update", 3, requeryMultiResults.persistentObjects.size());
-    final Iterator<?> i3 = requeryMultiResults.persistentObjects.iterator();
+    assertEquals("query result set size after update", 3, requeryMultiResults.stateObjects.size());
+    final Iterator<?> i3 = requeryMultiResults.stateObjects.iterator();
     final Person queriedGreenLantern2 = (Person) i3.next();
     assertEquals("queriedGreenLantern2.version", queriedGreenLantern1Version + 1, queriedGreenLantern2.version());
     assertEquals("queriedGreenLantern2.name", queriedGreenLantern2.name, greenLantern2Name);
@@ -346,7 +346,7 @@ public class GeodeObjectStoreIT {
 
     GeodePersistentObjectMapping personMapping = new GeodePersistentObjectMapping(PERSON_REGION_PATH);
     registeredMappings.add(personMapping);
-    PersistentObjectMapper personMapper = PersistentObjectMapper.with(Person.class, personMapping, personMapping);
+    StateObjectMapper personMapper = StateObjectMapper.with(Person.class, personMapping, personMapping);
     storeDelegate.registerMapper(personMapper);
 
     /* insert */
@@ -389,6 +389,7 @@ public class GeodeObjectStoreIT {
   }
 
   @BeforeClass
+  @SuppressWarnings("unused")
   public static void beforeAnyTest() {
     Properties serverProps = new Properties();
     serverProps.put(ConfigurationProperties.CACHE_XML_FILE, "server-cache.xml");

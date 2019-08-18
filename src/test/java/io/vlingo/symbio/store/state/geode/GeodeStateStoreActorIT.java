@@ -42,9 +42,9 @@ import io.vlingo.symbio.store.Result;
 import io.vlingo.symbio.store.common.MockObjectDispatcher;
 import io.vlingo.symbio.store.common.event.TestEvent;
 import io.vlingo.symbio.store.common.event.TestEventAdapter;
-import io.vlingo.symbio.store.common.geode.functions.ClearRegionFunction;
 import io.vlingo.symbio.store.common.geode.GemFireCacheProvider;
 import io.vlingo.symbio.store.common.geode.GeodeQueries;
+import io.vlingo.symbio.store.common.geode.functions.ClearRegionFunction;
 import io.vlingo.symbio.store.state.Entity1;
 import io.vlingo.symbio.store.state.Entity1.Entity1StateAdapter;
 import io.vlingo.symbio.store.state.MockObjectResultInterest;
@@ -297,6 +297,7 @@ public class GeodeStateStoreActorIT {
   }
 
   @BeforeClass
+  @SuppressWarnings("unused")
   public static void beforeAnyTest() {
     Properties serverProps = new Properties();
     serverProps.put(ConfigurationProperties.CACHE_XML_FILE, "server-cache.xml");

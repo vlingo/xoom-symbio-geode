@@ -7,26 +7,28 @@
 
 package io.vlingo.symbio.store.common.geode.dispatch;
 
-import com.google.gson.reflect.TypeToken;
-import io.vlingo.actors.Logger;
-import io.vlingo.common.serialization.JsonSerialization;
-import io.vlingo.symbio.BaseEntry;
-import io.vlingo.symbio.Entry;
-import io.vlingo.symbio.State;
-import io.vlingo.symbio.store.common.geode.dispatch.GeodeDispatchable;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Optional;
+
 import org.apache.geode.cache.Declarable;
 import org.apache.geode.pdx.PdxReader;
 import org.apache.geode.pdx.PdxSerializer;
 import org.apache.geode.pdx.PdxWriter;
 
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Optional;
+import com.google.gson.reflect.TypeToken;
+
+import io.vlingo.actors.Logger;
+import io.vlingo.common.serialization.JsonSerialization;
+import io.vlingo.symbio.BaseEntry;
+import io.vlingo.symbio.Entry;
+import io.vlingo.symbio.State;
 
 /**
  * GeodeDispatchableSerializer is responsible for serializing instances of
  * {@link GeodeDispatchable}.
  */
+@SuppressWarnings("unused")
 public class GeodeDispatchableSerializer implements PdxSerializer, Declarable {
 
   private static final Logger LOG = Logger.basicLogger();

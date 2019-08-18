@@ -6,13 +6,6 @@
 // one at https://mozilla.org/MPL/2.0/.
 package io.vlingo.symbio.store.object.geode.uow;
 
-import org.apache.geode.cache.Cache;
-import org.apache.geode.cache.Operation;
-import org.apache.geode.cache.asyncqueue.AsyncEvent;
-import org.apache.geode.cache.asyncqueue.AsyncEventListener;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -20,6 +13,13 @@ import java.util.Properties;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+
+import org.apache.geode.cache.Cache;
+import org.apache.geode.cache.Operation;
+import org.apache.geode.cache.asyncqueue.AsyncEvent;
+import org.apache.geode.cache.asyncqueue.AsyncEventListener;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 /**
  * GeodeUnitOfWorkListener is responsible for listening for create events
  * on the region which stores {@link GeodeUnitOfWork} objects.
@@ -64,6 +64,7 @@ public class GeodeUnitOfWorkListener implements AsyncEventListener {
   }
 
   @Override
+  @SuppressWarnings("rawtypes")
   public boolean processEvents(final List<AsyncEvent> events) {
     LOG.info("processEvents - entered with " + events.size() + " events");
     boolean result = false;

@@ -6,10 +6,7 @@
 // one at https://mozilla.org/MPL/2.0/.
 package io.vlingo.symbio.store.common.geode.pdx;
 
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Properties;
-import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.geode.cache.Cache;
 import org.apache.geode.cache.Declarable;
@@ -39,6 +36,7 @@ import org.slf4j.LoggerFactory;
  * </pre>
  * Subclass {@link PdxSerializerProviderAdapter} to easily implement a provider.
  */
+@SuppressWarnings("unused")
 public class DynaPdxSerializer implements PdxSerializer, Declarable {
 
   private static final Logger LOG = LoggerFactory.getLogger(DynaPdxSerializer.class);
@@ -87,7 +85,7 @@ public class DynaPdxSerializer implements PdxSerializer, Declarable {
   private PdxSerializer serializerFor(final Object o) {
     return serializerFor(o.getClass());
   }
-  
+
   private PdxSerializer serializerFor(final Class<?> c) {
     return provider.serializerForType(c);
   }
