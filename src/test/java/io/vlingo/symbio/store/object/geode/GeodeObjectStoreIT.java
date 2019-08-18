@@ -59,7 +59,7 @@ import io.vlingo.symbio.store.object.ListQueryExpression;
 import io.vlingo.symbio.store.object.ObjectStore;
 import io.vlingo.symbio.store.object.ObjectStoreReader.QueryMultiResults;
 import io.vlingo.symbio.store.object.ObjectStoreReader.QuerySingleResult;
-import io.vlingo.symbio.store.object.PersistentObject;
+import io.vlingo.symbio.store.object.StateObject;
 import io.vlingo.symbio.store.object.PersistentObjectMapper;
 import io.vlingo.symbio.store.object.QueryExpression;
 import io.vlingo.symbio.store.state.MockObjectResultInterest;
@@ -449,7 +449,7 @@ public class GeodeObjectStoreIT {
 
   private void clearEntities(GemFireCache cache) {
     for (GeodePersistentObjectMapping mapping : registeredMappings) {
-      Region<Long, PersistentObject> region = cache.getRegion(mapping.regionPath);
+      Region<Long, StateObject> region = cache.getRegion(mapping.regionPath);
       if (region != null) {
         FunctionService
           .onRegion(region)
