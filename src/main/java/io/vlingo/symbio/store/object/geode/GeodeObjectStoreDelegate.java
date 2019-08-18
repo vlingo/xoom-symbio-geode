@@ -25,7 +25,7 @@ import io.vlingo.symbio.store.dispatch.Dispatchable;
 import io.vlingo.symbio.store.object.ObjectStoreDelegate;
 import io.vlingo.symbio.store.object.ObjectStoreReader.QueryMultiResults;
 import io.vlingo.symbio.store.object.ObjectStoreReader.QuerySingleResult;
-import io.vlingo.symbio.store.object.PersistentObject;
+import io.vlingo.symbio.store.object.StateObject;
 import io.vlingo.symbio.store.object.PersistentObjectMapper;
 import io.vlingo.symbio.store.object.QueryExpression;
 import org.apache.geode.cache.GemFireCache;
@@ -151,7 +151,7 @@ public class GeodeObjectStoreDelegate extends GeodeDispatcherControlDelegate imp
   }
 
   @Override
-  public <T extends PersistentObject> State<?> persist(final T objectToPersist, final long updateId, final Metadata metadata) throws StorageException {
+  public <T extends StateObject> State<?> persist(final T objectToPersist, final long updateId, final Metadata metadata) throws StorageException {
     logger.debug("persist - entered with objectToPersist=" + objectToPersist);
     try {
       final Class<?> typeToPersist = objectToPersist.getClass();
@@ -182,7 +182,7 @@ public class GeodeObjectStoreDelegate extends GeodeDispatcherControlDelegate imp
   }
 
   @Override
-  public <T extends PersistentObject> Collection<State<?>> persistAll(final Collection<T> objectsToPersist, final long updateId, final Metadata metadata) throws StorageException {
+  public <T extends StateObject> Collection<State<?>> persistAll(final Collection<T> objectsToPersist, final long updateId, final Metadata metadata) throws StorageException {
     logger.debug("persistAll - entered");
     try {
       final List<State<?>> states = new ArrayList<>(objectsToPersist.size());
