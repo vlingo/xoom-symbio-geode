@@ -12,7 +12,7 @@ import io.vlingo.symbio.store.Result;
 import io.vlingo.symbio.store.StorageException;
 import io.vlingo.symbio.store.common.geode.GeodeQueries;
 import io.vlingo.symbio.store.dispatch.Dispatchable;
-import io.vlingo.symbio.store.object.PersistentObject;
+import io.vlingo.symbio.store.object.StateObject;
 import org.apache.geode.cache.GemFireCache;
 import org.apache.geode.cache.Region;
 import org.apache.geode.pdx.PdxReader;
@@ -37,7 +37,7 @@ public class GeodeUnitOfWork implements PdxSerializable {
 
   private Long id;
   private LocalDate timestamp;
-  private Map<String, Map<Long, PersistentObject>> entitiesByRegion;
+  private Map<String, Map<Long, StateObject>> entitiesByRegion;
   private Map<String, Entry<?>> entriesById;
   private Map<String, Dispatchable<Entry<?>, State<?>>> dispatchablesById;
 
@@ -58,11 +58,11 @@ public class GeodeUnitOfWork implements PdxSerializable {
 
   public LocalDate timestamp() { return timestamp; }
 
-  public Map<String, Map<Long, PersistentObject>> entitiesByRegion() {
+  public Map<String, Map<Long, StateObject>> entitiesByRegion() {
     return entitiesByRegion;
   }
 
-  public void persistEntity(final String regionPath, final PersistentObject entityToPersist) {
+  public void persistEntity(final String regionPath, final StateObject entityToPersist) {
     entitiesByRegion
       .computeIfAbsent(regionPath, k -> new HashMap<>())
       .put(entityToPersist.persistenceId(), entityToPersist);
@@ -135,7 +135,7 @@ public class GeodeUnitOfWork implements PdxSerializable {
   public void fromData(final PdxReader in) {
     this.id = in.readLong("id");
     this.timestamp = (LocalDate) in.readObject("timestamp");
-    this.entitiesByRegion = (Map<String, Map<Long, PersistentObject>>) in.readObject("entitiesByRegionPath");
+    this.entitiesByRegion = (Map<String, Map<Long, StateObject>>) in.readObject("entitiesByRegionPath");
     this.entriesById = (Map<String, Entry<?>>) in.readObject("entriesById");
     this.dispatchablesById = (Map<String, Dispatchable<Entry<?>, State<?>>>) in.readObject("dispatchablesById");
   }
