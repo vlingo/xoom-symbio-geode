@@ -9,10 +9,7 @@ package io.vlingo.symbio.store.object.geode;
 import io.vlingo.actors.Definition;
 import io.vlingo.actors.Logger;
 import io.vlingo.actors.World;
-import io.vlingo.symbio.Entry;
-import io.vlingo.symbio.Metadata;
-import io.vlingo.symbio.State;
-import io.vlingo.symbio.StateAdapterProvider;
+import io.vlingo.symbio.*;
 import io.vlingo.symbio.store.Result;
 import io.vlingo.symbio.store.StorageException;
 import io.vlingo.symbio.store.common.geode.GemFireCacheProvider;
@@ -221,20 +218,14 @@ public class GeodeObjectStoreDelegate extends GeodeDispatcherControlDelegate imp
 
   @Override
   public void persistEntries(final Collection<Entry<?>> entries) throws StorageException {
-    logger.debug("persistEntries - entered");
+    logger.debug("persistEntries - entered with entries = " + entries);
     try {
       for (final Entry<?> entry : entries) {
-        final GeodeEventJournalEntry geodeEntry;
-        if (entry instanceof GeodeEventJournalEntry) {
-          geodeEntry = (GeodeEventJournalEntry) entry;
-        } else {
-          geodeEntry = new GeodeEventJournalEntry(entry);
-        }
         idGenerator()
           .next(ENTRY_SEQUENCE_NAME)
           .andThenConsume(id -> {
-            geodeEntry.__internal__setId(String.valueOf(id));
-            unitOfWork.persistEntry(geodeEntry);
+            ((BaseEntry)entry).__internal__setId(String.valueOf(id));
+            unitOfWork.persistEntry(entry);
           });
       }
     }
@@ -245,7 +236,7 @@ public class GeodeObjectStoreDelegate extends GeodeDispatcherControlDelegate imp
 
   @Override
   public void persistDispatchable(final Dispatchable<Entry<?>, State<?>> dispatchable) throws StorageException {
-    logger.debug("persistDispatchable - entered");
+    logger.debug("persistDispatchable - entered with dispatchable = " + dispatchable);
     try {
       unitOfWork.persistDispatchable(dispatchable);
     }

@@ -13,6 +13,7 @@ import io.vlingo.symbio.store.dispatch.Dispatchable;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * GeodeDispatchable
@@ -33,7 +34,7 @@ public class GeodeDispatchable<R extends State<?>> extends Dispatchable<Entry<?>
       .append("GeodeDispatchable(")
       .append("originatorId=").append(originatorId)
       .append(", id=").append(id())
-      .append(", state=").append(state())
+      .append(", state=").append(state().orElse(null))
       .append(")")
       .toString();
   }

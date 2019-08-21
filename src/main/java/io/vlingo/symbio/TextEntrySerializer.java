@@ -4,27 +4,23 @@
 // Mozilla Public License, v. 2.0. If a copy of the MPL
 // was not distributed with this file, You can obtain
 // one at https://mozilla.org/MPL/2.0/.
-package io.vlingo.symbio.store.object.geode;
+package io.vlingo.symbio;
 
-import io.vlingo.symbio.Metadata;
 import org.apache.geode.pdx.PdxReader;
 import org.apache.geode.pdx.PdxSerializationException;
 import org.apache.geode.pdx.PdxSerializer;
 import org.apache.geode.pdx.PdxWriter;
 
-import java.time.LocalDate;
-
-public class GeodeEventJournalEntrySerializer implements PdxSerializer {
+public class TextEntrySerializer implements PdxSerializer {
 
   @Override
   public boolean toData(Object o, PdxWriter out) {
     boolean result = false;
-    if (o instanceof GeodeEventJournalEntry) {
-      final GeodeEventJournalEntry entry = (GeodeEventJournalEntry) o;
+    if (o instanceof BaseEntry.TextEntry) {
+      final BaseEntry.TextEntry entry = (BaseEntry.TextEntry) o;
       out
         .writeString("id", entry.id())
         .markIdentityField("id")
-        .writeObject("entryTimestamp", entry.entryTimestamp())
         .writeString("entryData", entry.entryData())
         .writeObject("metadata", entry.metadata())
         .writeString("typeName", entry.type())
@@ -37,20 +33,21 @@ public class GeodeEventJournalEntrySerializer implements PdxSerializer {
   @Override
   public Object fromData(Class<?> clazz, PdxReader in) {
     final String id = in.readString("id");
-    final LocalDate entryTimestamp = (LocalDate) in.readObject("entryTimestamp");
     final String entryData = in.readString("entryData");
     final Metadata metadata = (Metadata) in.readObject("metadata");
-    final Class<?> type = computeType(in.readString("type"));
+    final Class<?> type = computeType(in.readString("typeName"));
     final int typeVersion = in.readInt("typeVersion");
-    return new GeodeEventJournalEntry(id, entryTimestamp, type, typeVersion, entryData, metadata);
+    return new BaseEntry.TextEntry(id, type, typeVersion, entryData, metadata);
   }
 
   private Class<?> computeType(final String typeFQCN) {
+    if (typeFQCN == null  || typeFQCN.isEmpty())
+      throw new PdxSerializationException(getClass().getName() + ".computeType - cannot compute type because typeFQCN is null or empty");
     try {
       return Class.forName(typeFQCN);
     }
     catch (Throwable t) {
-      throw new PdxSerializationException("error loading class " + typeFQCN, t);
+      throw new PdxSerializationException(getClass().getName() + ".computeType - error executing Class.forName(" + typeFQCN + ")", t);
     }
   }
 }

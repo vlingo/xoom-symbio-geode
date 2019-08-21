@@ -66,7 +66,7 @@ public class GeodeUnitOfWorkListener implements AsyncEventListener {
   @Override
   @SuppressWarnings("rawtypes")
   public boolean processEvents(final List<AsyncEvent> events) {
-    LOG.info("processEvents - entered with " + events.size() + " events");
+    LOG.debug("processEvents - entered with " + events.size() + " events");
     boolean result = false;
     try {
       List<GeodeUnitOfWorkProcessor> eventProcessors = new ArrayList<>();
@@ -101,7 +101,7 @@ public class GeodeUnitOfWorkListener implements AsyncEventListener {
       return result;
     }
     finally {
-      LOG.info("processEvents - exited with result=" + result);
+      LOG.debug("processEvents - exited with result=" + result);
     }
   }
 }

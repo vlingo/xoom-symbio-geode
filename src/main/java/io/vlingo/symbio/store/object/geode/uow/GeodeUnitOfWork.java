@@ -43,6 +43,7 @@ public class GeodeUnitOfWork implements PdxSerializable {
 
   public GeodeUnitOfWork() {
     super();
+    this.timestamp = LocalDate.now();
     this.entitiesByRegion = new HashMap<>();
     this.entriesById = new HashMap<>();
     this.dispatchablesById = new HashMap<>();
@@ -91,7 +92,6 @@ public class GeodeUnitOfWork implements PdxSerializable {
   }
 
   public void applyTo(final GemFireCache cache) throws StorageException {
-    this.timestamp = LocalDate.now();
     applyEntitiesTo(cache);
     applyEntriesTo(cache);
     applyDispatchablesTo(cache);

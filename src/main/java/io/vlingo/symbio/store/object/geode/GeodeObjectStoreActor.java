@@ -43,7 +43,6 @@ import io.vlingo.symbio.store.object.QueryExpression;
  */
 public class GeodeObjectStoreActor extends Actor implements ObjectStore {
 
-  private static final Logger LOG = Logger.basicLogger();
   private static final long CHECK_CONFIRMATION_EXPIRATION_INTERVAL_DEFAULT = 1000L;
   private static final long CONFIRMATION_EXPIRATION_DEFAULT = 1000L;
 
@@ -122,12 +121,12 @@ public class GeodeObjectStoreActor extends Actor implements ObjectStore {
       interest.persistResultedIn(Success.of(Result.Success), objectToPersist, 1, 1, object);
     }
     catch (final StorageException ex) {
-      LOG.error("error persisting " + JsonSerialization.serialized(objectToPersist), ex);
+      logger().error("error persisting " + JsonSerialization.serialized(objectToPersist), ex);
       storeDelegate.failTransaction();
       interest.persistResultedIn(Failure.of(ex), objectToPersist, 1, 0, object);
     }
     catch (Exception ex) {
-      LOG.error("error persisting " + JsonSerialization.serialized(objectToPersist), ex);
+      logger().error("error persisting " + JsonSerialization.serialized(objectToPersist), ex);
       storeDelegate.failTransaction();
       interest.persistResultedIn(Failure.of(new StorageException(Result.Failure, ex.getMessage(), ex)), objectToPersist, 1, 0, object);
     }
@@ -154,12 +153,12 @@ public class GeodeObjectStoreActor extends Actor implements ObjectStore {
       interest.persistResultedIn(Success.of(Result.Success), objectsToPersist, objectsToPersist.size(), objectsToPersist.size(), object);
     }
     catch (final StorageException ex) {
-      LOG.error("error persisting " + JsonSerialization.serialized(objectsToPersist), ex);
+      logger().error("error persisting " + JsonSerialization.serialized(objectsToPersist), ex);
       storeDelegate.failTransaction();
       interest.persistResultedIn(Failure.of(ex), objectsToPersist, 1, 0, object);
     }
     catch (Exception ex) {
-      LOG.error("error persisting " + JsonSerialization.serialized(objectsToPersist), ex);
+      logger().error("error persisting " + JsonSerialization.serialized(objectsToPersist), ex);
       storeDelegate.failTransaction();
       interest.persistResultedIn(Failure.of(new StorageException(Result.Failure, ex.getMessage(), ex)), objectsToPersist, objectsToPersist.size(), 0, object);
     }
@@ -176,7 +175,7 @@ public class GeodeObjectStoreActor extends Actor implements ObjectStore {
       final QueryMultiResults results = storeDelegate.queryAll(expression);
       interest.queryAllResultedIn(Success.of(Result.Success), results, object);
     } catch (final StorageException e) {
-      LOG.error("Query all failed because: " + e.getMessage(), e);
+      logger().error("Query all failed because: " + e.getMessage(), e);
       interest.queryAllResultedIn(Failure.of(e), QueryMultiResults.of(null), object);
     } catch (Exception ex) {
       interest.queryAllResultedIn(
@@ -198,7 +197,7 @@ public class GeodeObjectStoreActor extends Actor implements ObjectStore {
       final QuerySingleResult singleResult = storeDelegate.queryObject(expression);
       interest.queryObjectResultedIn(Success.of(Result.Success), singleResult, object);
     } catch (final StorageException e) {
-      LOG.error("Query failed because: " + e.getMessage(), e);
+      logger().error("Query failed because: " + e.getMessage(), e);
       interest.queryAllResultedIn(Failure.of(e), QueryMultiResults.of(null), object);
     } catch (Exception ex) {
       interest.queryObjectResultedIn(

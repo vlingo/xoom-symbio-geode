@@ -4,7 +4,7 @@
             <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
         </encoder>
     </appender>
-    <logger name="io.vlingo" level="debug" additivity="false">
+    <logger name="io.vlingo" level="error" additivity="false">
         <appender-ref ref="STDOUT"/>
     </logger>
     <root level="INFO">
