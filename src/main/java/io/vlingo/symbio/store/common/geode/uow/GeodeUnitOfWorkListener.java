@@ -4,7 +4,7 @@
 // Mozilla Public License, v. 2.0. If a copy of the MPL
 // was not distributed with this file, You can obtain
 // one at https://mozilla.org/MPL/2.0/.
-package io.vlingo.symbio.store.object.geode.uow;
+package io.vlingo.symbio.store.common.geode.uow;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -14,6 +14,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import io.vlingo.symbio.store.object.geode.GeodeObjectUOW;
 import org.apache.geode.cache.Cache;
 import org.apache.geode.cache.Operation;
 import org.apache.geode.cache.asyncqueue.AsyncEvent;
@@ -22,10 +23,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 /**
  * GeodeUnitOfWorkListener is responsible for listening for create events
- * on the region which stores {@link GeodeUnitOfWork} objects.
+ * on the region which stores {@link GeodeObjectUOW} objects.
  * <p>
  * Note that {@link #processEvents(List)} method receives a batch of
- * {@link AsyncEvent}, each of which represents one {@link GeodeUnitOfWork} that
+ * {@link AsyncEvent}, each of which represents one {@link GeodeObjectUOW} that
  * needs to be processed, and returns a boolean which indicates whether all
  * the events in the batch were processed correctly.  As long as {@link #processEvents(List)}
  * returns false, Geode continues to re-try processing the events.
@@ -35,14 +36,14 @@ import org.slf4j.LoggerFactory;
  * To protect against loss of events, it is recommended that the async queue be
  * configured for persistence to a disk store. You may wish to experiment with
  * configuring multiple dispatcher threads but, if so, ensure that you use the
- * key ordering policy (since {@link GeodeUnitOfWork} keys are long value that
+ * key ordering policy (since {@link GeodeObjectUOW} keys are long value that
  * is allocated out of a single, monotonically-increasing ID sequence.
  * <p>
  * Here is a basic example of how to configure this listener (not all options shown):
  * <pre>
  *   &lt;async-event-queue id="object-store-uow-queue" persistent="true" disk-store-name="uowStore" parallel="false"&gt;
  *     &lt;async-event-listener&gt;
- *       &lt;class-name&gt;io.vlingo.symbio.store.object.geode.uow.GeodeUnitOfWorkListener&lt;/class-name&gt;
+ *       &lt;class-name&gt;io.vlingo.symbio.store.common.geode.uow.GeodeUnitOfWorkListener&lt;/class-name&gt;
  *     &lt;/async-event-listener&gt;
  *   &lt;/async-event-queue&gt;
  * </pre>
@@ -75,7 +76,7 @@ public class GeodeUnitOfWorkListener implements AsyncEventListener {
         LOG.info("processEvents - event[" + (i++) + "] = " + event);
         final Operation op = event.getOperation();
         if (op.equals(Operation.CREATE)) {
-          final GeodeUnitOfWork uow = (GeodeUnitOfWork) event.getDeserializedValue();
+          final GeodeObjectUOW uow = (GeodeObjectUOW) event.getDeserializedValue();
           eventProcessors.add(new GeodeUnitOfWorkProcessor(cache, uow));
         }
       }

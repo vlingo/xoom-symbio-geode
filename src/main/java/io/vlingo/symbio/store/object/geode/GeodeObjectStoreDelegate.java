@@ -17,7 +17,6 @@ import io.vlingo.symbio.store.common.geode.GeodeQueries;
 import io.vlingo.symbio.store.common.geode.dispatch.GeodeDispatcherControlDelegate;
 import io.vlingo.symbio.store.common.geode.identity.IDGenerator;
 import io.vlingo.symbio.store.common.geode.identity.LongIDGeneratorActor;
-import io.vlingo.symbio.store.object.geode.uow.GeodeUnitOfWork;
 import io.vlingo.symbio.store.dispatch.Dispatchable;
 import io.vlingo.symbio.store.object.ObjectStoreDelegate;
 import io.vlingo.symbio.store.object.ObjectStoreReader.QueryMultiResults;
@@ -46,7 +45,7 @@ public class GeodeObjectStoreDelegate extends GeodeDispatcherControlDelegate imp
   private final ConsistencyPolicy consistencyPolicy;
   private final Map<Class<?>, StateObjectMapper> mappers;
   private final StateAdapterProvider stateAdapterProvider;
-  private GeodeUnitOfWork unitOfWork;
+  private GeodeObjectUOW unitOfWork;
   private IDGenerator<Long> idGenerator;
 
   public GeodeObjectStoreDelegate(
@@ -105,7 +104,7 @@ public class GeodeObjectStoreDelegate extends GeodeDispatcherControlDelegate imp
       if (consistencyPolicy.isTransactional()) { /* not yet supported */
         cache().getCacheTransactionManager().begin();
       }
-      this.unitOfWork = new GeodeUnitOfWork();
+      this.unitOfWork = new GeodeObjectUOW();
     }
     finally {
       logger.debug("beginTransaction - exited");

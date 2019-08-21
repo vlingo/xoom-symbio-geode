@@ -5,7 +5,7 @@
 	version="1.0">
 	<async-event-queue id="object-store-uow-queue" persistent="false" parallel="false">
 		<async-event-listener>
-			<class-name>io.vlingo.symbio.store.object.geode.uow.GeodeUnitOfWorkListener</class-name>
+			<class-name>io.vlingo.symbio.store.common.geode.uow.GeodeUnitOfWorkListener</class-name>
 		</async-event-listener>
 	</async-event-queue>
 	<pdx>
