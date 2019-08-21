@@ -17,6 +17,7 @@ import io.vlingo.symbio.store.common.geode.GeodeQueries;
 import io.vlingo.symbio.store.common.geode.dispatch.GeodeDispatcherControlDelegate;
 import io.vlingo.symbio.store.common.geode.identity.IDGenerator;
 import io.vlingo.symbio.store.common.geode.identity.LongIDGeneratorActor;
+import io.vlingo.symbio.store.common.geode.uow.GeodeUnitOfWork;
 import io.vlingo.symbio.store.dispatch.Dispatchable;
 import io.vlingo.symbio.store.object.ObjectStoreDelegate;
 import io.vlingo.symbio.store.object.ObjectStoreReader.QueryMultiResults;
@@ -45,7 +46,7 @@ public class GeodeObjectStoreDelegate extends GeodeDispatcherControlDelegate imp
   private final ConsistencyPolicy consistencyPolicy;
   private final Map<Class<?>, StateObjectMapper> mappers;
   private final StateAdapterProvider stateAdapterProvider;
-  private GeodeObjectUOW unitOfWork;
+  private GeodeUnitOfWork unitOfWork;
   private IDGenerator<Long> idGenerator;
 
   public GeodeObjectStoreDelegate(
@@ -104,7 +105,7 @@ public class GeodeObjectStoreDelegate extends GeodeDispatcherControlDelegate imp
       if (consistencyPolicy.isTransactional()) { /* not yet supported */
         cache().getCacheTransactionManager().begin();
       }
-      this.unitOfWork = new GeodeObjectUOW();
+      this.unitOfWork = new GeodeUnitOfWork();
     }
     finally {
       logger.debug("beginTransaction - exited");
@@ -168,7 +169,7 @@ public class GeodeObjectStoreDelegate extends GeodeDispatcherControlDelegate imp
         }
       }
       objectToPersist.incrementVersion();
-      unitOfWork.persistEntity(mapping.regionPath, objectToPersist);
+      unitOfWork.register(objectToPersist.persistenceId(), objectToPersist, mapping.regionPath);
 
       return stateAdapterProvider.asRaw(String.valueOf(objectToPersist.persistenceId()), objectToPersist, 1, metadata);
     }
@@ -203,7 +204,7 @@ public class GeodeObjectStoreDelegate extends GeodeDispatcherControlDelegate imp
           }
         }
         objectToPersist.incrementVersion();
-        unitOfWork.persistEntity(mapping.regionPath, objectToPersist);
+        unitOfWork.register(objectToPersist.persistenceId(), objectToPersist, mapping.regionPath);
 
         final State<?> raw = stateAdapterProvider.asRaw(String.valueOf(objectToPersist.persistenceId()), objectToPersist, 1, metadata);
         states.add(raw);
@@ -224,7 +225,7 @@ public class GeodeObjectStoreDelegate extends GeodeDispatcherControlDelegate imp
           .next(ENTRY_SEQUENCE_NAME)
           .andThenConsume(id -> {
             ((BaseEntry)entry).__internal__setId(String.valueOf(id));
-            unitOfWork.persistEntry(entry);
+            unitOfWork.register(id, entry, GeodeQueries.OBJECTSTORE_EVENT_JOURNAL_REGION_PATH);
           });
       }
     }
@@ -237,7 +238,7 @@ public class GeodeObjectStoreDelegate extends GeodeDispatcherControlDelegate imp
   public void persistDispatchable(final Dispatchable<Entry<?>, State<?>> dispatchable) throws StorageException {
     logger.debug("persistDispatchable - entered with dispatchable = " + dispatchable);
     try {
-      unitOfWork.persistDispatchable(dispatchable);
+      unitOfWork.register(dispatchable.id(), dispatchable, GeodeQueries.DISPATCHABLES_REGION_PATH);
     }
     finally {
       logger.debug("persistDispatchable - exited");
