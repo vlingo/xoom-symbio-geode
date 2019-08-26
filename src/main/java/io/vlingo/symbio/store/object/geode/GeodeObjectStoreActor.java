@@ -15,7 +15,6 @@ import java.util.stream.Collectors;
 
 import io.vlingo.actors.Actor;
 import io.vlingo.actors.Definition;
-import io.vlingo.actors.Logger;
 import io.vlingo.common.Completes;
 import io.vlingo.common.Failure;
 import io.vlingo.common.Success;
@@ -35,8 +34,8 @@ import io.vlingo.symbio.store.dispatch.DispatcherControl;
 import io.vlingo.symbio.store.dispatch.control.DispatcherControlActor;
 import io.vlingo.symbio.store.object.ObjectStore;
 import io.vlingo.symbio.store.object.ObjectStoreDelegate;
-import io.vlingo.symbio.store.object.StateObject;
 import io.vlingo.symbio.store.object.QueryExpression;
+import io.vlingo.symbio.store.object.StateObject;
 /**
  * GeodeObjectStoreActor is an {@link ObjectStore} that knows how to
  * read/write {@link StateObject} from/to Apache Geode.

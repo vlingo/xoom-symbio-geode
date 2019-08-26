@@ -7,13 +7,12 @@
 
 package io.vlingo.symbio.store.common.geode.dispatch;
 
+import java.time.LocalDateTime;
+import java.util.List;
+
 import io.vlingo.symbio.Entry;
 import io.vlingo.symbio.State;
 import io.vlingo.symbio.store.dispatch.Dispatchable;
-
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Optional;
 
 /**
  * GeodeDispatchable

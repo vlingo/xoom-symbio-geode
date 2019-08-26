@@ -6,10 +6,28 @@
 // one at https://mozilla.org/MPL/2.0/.
 package io.vlingo.symbio.store.object.geode;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
+import org.apache.geode.cache.GemFireCache;
+import org.apache.geode.cache.Region;
+import org.apache.geode.cache.query.Query;
+import org.apache.geode.cache.query.QueryService;
+import org.apache.geode.cache.query.SelectResults;
+
 import io.vlingo.actors.Definition;
 import io.vlingo.actors.Logger;
 import io.vlingo.actors.World;
-import io.vlingo.symbio.*;
+import io.vlingo.symbio.BaseEntry;
+import io.vlingo.symbio.Entry;
+import io.vlingo.symbio.Metadata;
+import io.vlingo.symbio.State;
+import io.vlingo.symbio.StateAdapterProvider;
 import io.vlingo.symbio.store.Result;
 import io.vlingo.symbio.store.StorageException;
 import io.vlingo.symbio.store.common.geode.GemFireCacheProvider;
@@ -22,25 +40,18 @@ import io.vlingo.symbio.store.dispatch.Dispatchable;
 import io.vlingo.symbio.store.object.ObjectStoreDelegate;
 import io.vlingo.symbio.store.object.ObjectStoreReader.QueryMultiResults;
 import io.vlingo.symbio.store.object.ObjectStoreReader.QuerySingleResult;
+import io.vlingo.symbio.store.object.QueryExpression;
 import io.vlingo.symbio.store.object.StateObject;
 import io.vlingo.symbio.store.object.StateObjectMapper;
-import io.vlingo.symbio.store.object.QueryExpression;
-import org.apache.geode.cache.GemFireCache;
-import org.apache.geode.cache.Region;
-import org.apache.geode.cache.query.Query;
-import org.apache.geode.cache.query.QueryService;
-import org.apache.geode.cache.query.SelectResults;
-
-import java.util.*;
 /**
  * GeodeObjectStoreDelegate is responsible for adapting {@link io.vlingo.symbio.store.object.ObjectStore}
  * to Apache Geode.
  */
 public class GeodeObjectStoreDelegate extends GeodeDispatcherControlDelegate implements ObjectStoreDelegate<Entry<?>, State<?>> {
-  
+
   public static final String ENTRY_SEQUENCE_NAME = "Entries";
   public static final String UOW_SEQUENCE_NAME = "UnitsOfWork";
-  
+
   private final World world;
   private final Logger logger;
   private final ConsistencyPolicy consistencyPolicy;
@@ -217,6 +228,7 @@ public class GeodeObjectStoreDelegate extends GeodeDispatcherControlDelegate imp
   }
 
   @Override
+  @SuppressWarnings("rawtypes")
   public void persistEntries(final Collection<Entry<?>> entries) throws StorageException {
     logger.debug("persistEntries - entered with entries = " + entries);
     try {
