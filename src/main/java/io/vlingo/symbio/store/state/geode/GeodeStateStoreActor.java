@@ -12,6 +12,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import io.vlingo.symbio.store.common.geode.identity.IDGenerator;
+import io.vlingo.symbio.store.common.geode.identity.LongIDGeneratorActor;
+import io.vlingo.symbio.store.common.geode.uow.GeodeUnitOfWork;
 import org.apache.geode.cache.GemFireCache;
 import org.apache.geode.cache.Region;
 
@@ -55,6 +58,8 @@ public class GeodeStateStoreActor extends Actor implements StateStore {
   private final Map<String,StateStoreEntryReader<?>> entryReaders;
   private final EntryAdapterProvider entryAdapterProvider;
   private final StateAdapterProvider stateAdapterProvider;
+  private IDGenerator<Long> idGenerator;
+
 
   public GeodeStateStoreActor(final String originatorId, final Dispatcher<GeodeDispatchable<ObjectState<Object>>> dispatcher) {
     this(originatorId,
@@ -126,60 +131,35 @@ public class GeodeStateStoreActor extends Actor implements StateStore {
 
   private void readFor(final String id, final Class<?> type, final ReadResultInterest interest, final Object object) {
 
-    if (interest != null) {
+    if (interest == null) {
+      logger().warn(getClass().getSimpleName() + " readFor() missing ReadResultInterest for: " + (id == null ? "unknown id" : id));
+      return;
+    }
 
-      if (id == null || type == null) {
-        interest.readResultedIn(
-          Failure.of(new StorageException(Result.Error, id == null ? "The id is null." : "The type is null.")),
-          id,
-          null,
-          -1,
-          null,
-          object);
-        return;
-      }
+    if (id == null || type == null) {
+      interest.readResultedIn(Failure.of(new StorageException(Result.Error, id == null ? "The id is null." : "The type is null.")), id, null, -1, null, object);
+      return;
+    }
 
-      final String storeName = StateTypeStateStoreMap.storeNameFrom(type);
-      if (storeName == null) {
-        interest.readResultedIn(
-          Failure.of(new StorageException(Result.NoTypeStore, "No type store.")),
-          id,
-          null,
-          -1,
-          null,
-          object);
-        return;
-      }
+    final String storeName = StateTypeStateStoreMap.storeNameFrom(type);
+    if (storeName == null) {
+      interest.readResultedIn(Failure.of(new StorageException(Result.NoTypeStore, "No type store.")), id, null, -1, null, object);
+      return;
+    }
 
-      final Region<Object, ObjectState<Object>> typeStore = cache().getRegion(storeName);
-      if (typeStore == null) {
-        interest.readResultedIn(
-          Failure.of(new StorageException(Result.NotFound, "Store not found: " + storeName)),
-          id,
-          null,
-          -1,
-          null,
-          object);
-        return;
-      }
+    final Region<Object, ObjectState<Object>> typeStore = regionFor(storeName);
+    if (typeStore == null) {
+      interest.readResultedIn(Failure.of(new StorageException(Result.NotFound, "Store not found: " + storeName)), id, null, -1, null, object);
+      return;
+    }
 
-      final ObjectState<Object> raw = typeStore.get(id);
-      if (raw != null) {
-        final Object state = stateAdapterProvider.fromRaw(raw);
-        interest.readResultedIn(Success.of(Result.Success), id, state, raw.dataVersion, raw.metadata, object);
-      }
-      else {
-        interest.readResultedIn(
-          Failure.of(new StorageException(Result.NotFound, "Not found.")),
-          id,
-          null,
-          -1,
-          null,
-          object);
-      }
+    final ObjectState<Object> raw = typeStore.get(id);
+    if (raw != null) {
+      final Object state = stateAdapterProvider.fromRaw(raw);
+      interest.readResultedIn(Success.of(Result.Success), id, state, raw.dataVersion, raw.metadata, object);
     }
     else {
-      logger().warn(getClass().getSimpleName() + " readFor() missing ReadResultInterest for: " + (id == null ? "unknown id" : id));
+      interest.readResultedIn(Failure.of(new StorageException(Result.NotFound, "Not found.")), id, null, -1, null, object);
     }
   }
 
@@ -190,46 +170,27 @@ public class GeodeStateStoreActor extends Actor implements StateStore {
 
   private <S,C> void writeWith(final String id, final S state, final int stateVersion, final List<Source<C>> sources, final Metadata metadata, final WriteResultInterest interest, final Object object) {
 
+    logger().debug("writeWith - entered with id=" + id + ", state=" + state + ", stateVersion=" + stateVersion + ", sources=" + sources + ", metadata=" + metadata + ", interest=" + interest + ", object=" + object);
+
     if (interest == null) {
-      logger().warn(
-        getClass().getSimpleName() +
-        " writeWith() missing WriteResultInterest for: " +
-        (state == null ? "unknown id" : id));
+      logger().warn(getClass().getSimpleName() + " writeWith() missing WriteResultInterest for: " + (state == null ? "unknown id" : id));
       return;
     }
 
     if (state == null) {
-      interest.writeResultedIn(
-        Failure.of(new StorageException(Result.Error, "The state is null.")),
-        id,
-        state,
-        stateVersion,
-        sources,
-        object);
+      interest.writeResultedIn(Failure.of(new StorageException(Result.Error, "The state is null.")), id, state, stateVersion, sources, object);
       return;
     }
 
     final String storeName = StateTypeStateStoreMap.storeNameFrom(state.getClass());
     if (storeName == null) {
-      interest.writeResultedIn(
-        Failure.of(new StorageException(Result.NoTypeStore, "Store not configured: " + storeName)),
-        id,
-        state,
-        stateVersion,
-        sources,
-        object);
+      interest.writeResultedIn(Failure.of(new StorageException(Result.NoTypeStore, "Store not configured: " + storeName)), id, state, stateVersion, sources, object);
       return;
     }
 
-    Region<Object, State<Object>> typeStore = cache().getRegion(storeName);
+    Region<Object, State<Object>> typeStore = regionFor(storeName);
     if (typeStore == null) {
-      interest.writeResultedIn(
-          Failure.of(new StorageException(Result.NoTypeStore, "Store not found: " + storeName)),
-          id,
-          state,
-          stateVersion,
-          sources,
-          object);
+      interest.writeResultedIn(Failure.of(new StorageException(Result.NoTypeStore, "Store not found: " + storeName)), id, state, stateVersion, sources, object);
       return;
     }
 
@@ -237,33 +198,38 @@ public class GeodeStateStoreActor extends Actor implements StateStore {
       ? stateAdapterProvider.asRaw(id, state, stateVersion)
       : stateAdapterProvider.asRaw(id, state, stateVersion, metadata);
 
-    // TODO: Write sources
-    final List<Entry<?>> entries = entryAdapterProvider.asEntries(sources, metadata);// final List<Entry<?>> entries =
+    GeodeUnitOfWork uow = new GeodeUnitOfWork();
 
     try {
-      final State<Object> persistedState = typeStore.putIfAbsent(id, raw);
+      final State<Object> persistedState = typeStore.get(id);
       if (persistedState != null) {
         if (persistedState.dataVersion >= raw.dataVersion) {
-          interest.writeResultedIn(
-            Failure.of(new StorageException(Result.ConcurrencyViolation, "Version conflict.")),
-            id,
-            state,
-            stateVersion,
-            sources,
-            object);
+          final String message = "Version conflict for object with persistenceId " + id + "; attempted to overwrite current entry of version " + persistedState.dataVersion + " with version " + raw.dataVersion;
+          interest.writeResultedIn(Failure.of(new StorageException(Result.ConcurrencyViolation, message)), id, state, stateVersion, sources, object);
+          //logger().error(message);
           return;
         }
-        typeStore.put(id, raw);
       }
+      final ObjectState<Object> stateToPersist =
+        new ObjectState<>(raw.id, raw.typed(), raw.typeVersion, raw.data, raw.dataVersion, raw.metadata);
+      uow.register(id, stateToPersist, storeName);
+
+      final List<Entry<?>> entries = entryAdapterProvider.asEntries(sources, metadata);
+      entries.forEach(entry -> uow.register(entry.id(), entry, GeodeQueries.EVENT_JOURNAL_REGION_PATH));
+
       final String dispatchId = storeName + ":" + id;
+      final GeodeDispatchable<ObjectState<Object>> dispatchable =
+        new GeodeDispatchable<>(originatorId, LocalDateTime.now(), dispatchId, raw, entries);
+      uow.register(dispatchId, dispatchable, GeodeQueries.DISPATCHABLES_REGION_PATH);
 
-      Region<String, GeodeDispatchable<ObjectState<Object>>> dispatchablesRegion =
-        cache().getRegion(GeodeQueries.DISPATCHABLES_REGION_PATH);
-      dispatchablesRegion.put(dispatchId, new GeodeDispatchable<>(originatorId, LocalDateTime.now(), dispatchId, raw, entries));
-
-      dispatch(dispatchId, raw, entries);
-
-      interest.writeResultedIn(Success.of(Result.Success), id, state, stateVersion, sources, object);
+      idGenerator()
+        .next(GeodeQueries.UOW_SEQUENCE_NAME)
+        .andThenConsume(uowId -> {
+          uow.withId(uowId);
+          regionFor(GeodeQueries.UOW_REGION_PATH).put(uowId, uow);
+          dispatch(dispatchId, raw, entries);
+          interest.writeResultedIn(Success.of(Result.Success), id, state, stateVersion, sources, object);
+        });
     }
     catch (Exception e) {
       logger().error(getClass().getSimpleName() + " writeWith() error because: " + e.getMessage(), e);
@@ -279,5 +245,21 @@ public class GeodeStateStoreActor extends Actor implements StateStore {
     else {
       throw new RuntimeException("no GemFireCache has been created in this JVM");
     }
+  }
+
+  private <K, V> Region<K, V> regionFor(final String path) {
+    return cache().getRegion(path);
+  }
+
+  @SuppressWarnings("unchecked")
+  private IDGenerator<Long> idGenerator() {
+    if (idGenerator == null) {
+      idGenerator = stage().actorFor(
+        IDGenerator.class,
+        Definition.has(
+          LongIDGeneratorActor.class,
+          Definition.parameters(1L)));
+    }
+    return idGenerator;
   }
 }

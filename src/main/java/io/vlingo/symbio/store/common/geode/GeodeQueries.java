@@ -10,21 +10,15 @@ package io.vlingo.symbio.store.common.geode;
  */
 public interface GeodeQueries {
 
+  /* GemFire Region Paths */
   String DISPATCHABLES_REGION_PATH = "Dispatchables";
-  String OBJECTSTORE_EVENT_JOURNAL_REGION_PATH = "ObjectStoreEventJournal";
-  String OBJECTSTORE_UOW_REGION_PATH = "ObjectStoreUnitsOfWork";
-  String STATESTORE_EVENT_JOURNAL_REGION_PATH = "StateStoreEventJournal";
-  String EVENT_JOURNAL_SEQUENCE_KEY = "IdSequence";
+  String EVENT_JOURNAL_REGION_PATH = "EventJournal";
+  String UOW_REGION_PATH = "UnitsOfWork";
 
-  String OQL_DISPATCHABLES_SELECT =
-    //"<trace> " +
-    "SELECT DISTINCT * FROM /" +
-    DISPATCHABLES_REGION_PATH +
-    " WHERE originatorId = $1" +
-    " ORDER BY createdOn ASC";
+  /* ID Sequence Names */
+  String ENTRY_SEQUENCE_NAME = "Entries";
+  String UOW_SEQUENCE_NAME = "UnitsOfWork";
 
-  String ALL_UNCONFIRMED_DISPATCHABLES_SELECT =
-    "SELECT DISTINCT * FROM /" +
-    DISPATCHABLES_REGION_PATH  +
-    " ORDER BY createdOn ASC";
+  /* Queries */
+  String ALL_UNCONFIRMED_DISPATCHABLES_SELECT = "SELECT DISTINCT * FROM /" + DISPATCHABLES_REGION_PATH  + " ORDER BY createdOn ASC";
 }

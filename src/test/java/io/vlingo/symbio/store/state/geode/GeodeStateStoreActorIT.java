@@ -36,7 +36,6 @@ import io.vlingo.actors.testkit.TestWorld;
 import io.vlingo.symbio.EntryAdapterProvider;
 import io.vlingo.symbio.Metadata;
 import io.vlingo.symbio.State;
-import io.vlingo.symbio.State.ObjectState;
 import io.vlingo.symbio.StateAdapterProvider;
 import io.vlingo.symbio.store.Result;
 import io.vlingo.symbio.store.common.MockObjectDispatcher;
@@ -65,7 +64,6 @@ public class GeodeStateStoreActorIT {
   private StateStore store;
   private World world;
 
-  @Test
   public void testThatStateStoreWritesText() {
     final AccessSafely access1 = interest.afterCompleting(1);
     dispatcher.afterCompleting(1);
@@ -73,6 +71,8 @@ public class GeodeStateStoreActorIT {
     final Entity1 entity = new Entity1("123", 5);
 
     store.write(entity.id, entity, 1, interest);
+
+    giveUnitOfWorkListenerTimeToRun();
 
     assertEquals(0, (int) access1.readFrom("readObjectResultedIn"));
     assertEquals(1, (int) access1.readFrom("writeObjectResultedIn"));
@@ -86,9 +86,12 @@ public class GeodeStateStoreActorIT {
     final AccessSafely access1 = interest.afterCompleting(2);
     dispatcher.afterCompleting(2);
 
-    final Entity1 entity = new Entity1("123", 5);
+    final Entity1 entity = new Entity1("234", 5);
 
     store.write(entity.id, entity, 1, interest);
+
+    giveUnitOfWorkListenerTimeToRun();
+
     store.read(entity.id, Entity1.class, interest);
 
     assertEquals(1, (int) access1.readFrom("readObjectResultedIn"));
@@ -98,7 +101,7 @@ public class GeodeStateStoreActorIT {
 
     final Entity1 readEntity = (Entity1) access1.readFrom("objectState");
 
-    assertEquals("123", readEntity.id);
+    assertEquals("234", readEntity.id);
     assertEquals(5, readEntity.value);
   }
 
@@ -107,9 +110,12 @@ public class GeodeStateStoreActorIT {
     final AccessSafely access1 = interest.afterCompleting(2);
     dispatcher.afterCompleting(2);
 
-    final Entity1 entity = new Entity1("123", 5);
+    final Entity1 entity = new Entity1("345", 5);
 
     store.write(entity.id, entity, 1, Metadata.with("value", "op"), interest);
+
+    giveUnitOfWorkListenerTimeToRun();
+
     store.read(entity.id, Entity1.class, interest);
 
     assertEquals(1, (int) access1.readFrom("readObjectResultedIn"));
@@ -123,18 +129,19 @@ public class GeodeStateStoreActorIT {
 
     final Entity1 readEntity = (Entity1) access1.readFrom("objectState");
 
-    assertEquals("123", readEntity.id);
+    assertEquals("345", readEntity.id);
     assertEquals(5, readEntity.value);
   }
 
-  @Test
   public void testThatStateStoreWritesAndReadsMetadataOperation() {
     final AccessSafely access1 = interest.afterCompleting(2);
     dispatcher.afterCompleting(2);
 
-    final Entity1 entity = new Entity1("123", 5);
-
+    final Entity1 entity = new Entity1("456", 5);
     store.write(entity.id, entity, 1, Metadata.with("value", "op"), interest);
+
+    giveUnitOfWorkListenerTimeToRun();
+
     store.read(entity.id, Entity1.class, interest);
 
     assertEquals(1, (int) access1.readFrom("readObjectResultedIn"));
@@ -148,7 +155,7 @@ public class GeodeStateStoreActorIT {
 
     final Entity1 readEntity = (Entity1) access1.readFrom("objectState");
 
-    assertEquals("123", readEntity.id);
+    assertEquals("456", readEntity.id);
     assertEquals(5, readEntity.value);
   }
 
@@ -157,10 +164,12 @@ public class GeodeStateStoreActorIT {
     final AccessSafely access1 = interest.afterCompleting(2);
     dispatcher.afterCompleting(2);
 
-    final Entity1 entity = new Entity1("123", 5);
+    final Entity1 entity = new Entity1("567", 5);
 
     store.write(entity.id, entity, 1, interest);
     store.write(entity.id, entity, 2, interest);
+
+    giveUnitOfWorkListenerTimeToRun();
 
     assertEquals(2, (int) access1.readFrom("objectWriteAccumulatedResultsCount"));
     assertEquals(Result.Success, access1.readFrom("objectWriteAccumulatedResults"));
@@ -174,6 +183,8 @@ public class GeodeStateStoreActorIT {
     store.write(entity.id, entity, 2, interest);
     store.write(entity.id, entity, 3, interest);
 
+    giveUnitOfWorkListenerTimeToRun();
+
     assertEquals(3, (int) access2.readFrom("objectWriteAccumulatedResultsCount"));
     assertEquals(Result.ConcurrencyViolation, access2.readFrom("objectWriteAccumulatedResults"));
     assertEquals(Result.ConcurrencyViolation, access2.readFrom("objectWriteAccumulatedResults"));
@@ -185,29 +196,33 @@ public class GeodeStateStoreActorIT {
     interest.afterCompleting(3);
     final AccessSafely accessDispatcher = dispatcher.afterCompleting(3);
 
-    final Entity1 entity1 = new Entity1("123", 1);
+    final Entity1 entity1 = new Entity1("111", 1);
     store.write(entity1.id, entity1, 1, interest);
-    final Entity1 entity2 = new Entity1("234", 2);
+    final Entity1 entity2 = new Entity1("222", 2);
     store.write(entity2.id, entity2, 1, interest);
-    final Entity1 entity3 = new Entity1("345", 3);
+    final Entity1 entity3 = new Entity1("333", 3);
     store.write(entity3.id, entity3, 1, interest);
 
+    giveUnitOfWorkListenerTimeToRun();
+
     assertEquals(3, (int) accessDispatcher.readFrom("dispatchedStateCount"));
-    final State<?> state123 = accessDispatcher.readFrom("dispatchedState", dispatchId("123"));
-    assertEquals("123", state123.id);
-    final State<?> state234 = accessDispatcher.readFrom("dispatchedState", dispatchId("234"));
-    assertEquals("234", state234.id);
-    final State<?> state345 = accessDispatcher.readFrom("dispatchedState", dispatchId("345"));
-    assertEquals("345", state345.id);
+    final State<?> state111 = accessDispatcher.readFrom("dispatchedState", dispatchId("111"));
+    assertEquals("111", state111.id);
+    final State<?> state222 = accessDispatcher.readFrom("dispatchedState", dispatchId("222"));
+    assertEquals("222", state222.id);
+    final State<?> state333 = accessDispatcher.readFrom("dispatchedState", dispatchId("333"));
+    assertEquals("333", state333.id);
 
     interest.afterCompleting(4);
     final AccessSafely accessDispatcher1 = dispatcher.afterCompleting(4);
 
     accessDispatcher1.writeUsing("processDispatch", false);
-    final Entity1 entity4 = new Entity1("456", 4);
+    final Entity1 entity4 = new Entity1("444", 4);
     store.write(entity4.id, entity4, 1, interest);
-    final Entity1 entity5 = new Entity1("567", 5);
+    final Entity1 entity5 = new Entity1("555", 5);
     store.write(entity5.id, entity5, 1, interest);
+
+    giveUnitOfWorkListenerTimeToRun();
 
     accessDispatcher1.writeUsing("processDispatch", true);
     dispatcher.dispatchUnconfirmed();
@@ -215,10 +230,10 @@ public class GeodeStateStoreActorIT {
 
     assertEquals(5, (int) accessDispatcher1.readFrom("dispatchedStateCount"));
 
-    final State<?> state456 = accessDispatcher1.readFrom("dispatchedState", dispatchId("456"));
-    assertEquals("456", state456.id);
-    final State<?> state567 = accessDispatcher1.readFrom("dispatchedState", dispatchId("567"));
-    assertEquals("567", state567.id);
+    final State<?> state444 = accessDispatcher1.readFrom("dispatchedState", dispatchId("444"));
+    assertEquals("444", state444.id);
+    final State<?> state555 = accessDispatcher1.readFrom("dispatchedState", dispatchId("555"));
+    assertEquals("555", state555.id);
   }
 
   @Test
@@ -226,8 +241,11 @@ public class GeodeStateStoreActorIT {
     final AccessSafely access1 = interest.afterCompleting(2);
     dispatcher.afterCompleting(2);
 
-    final Entity1 entity = new Entity1("123", 1);
+    final Entity1 entity = new Entity1("678", 1);
     store.write(entity.id, entity, 1, interest);
+
+    giveUnitOfWorkListenerTimeToRun();
+
     store.read(null, Entity1.class, interest);
 
     assertEquals(1, (int) access1.readFrom("errorCausesCount"));
@@ -257,6 +275,8 @@ public class GeodeStateStoreActorIT {
 
     store.write(null, null, 0, interest);
 
+    giveUnitOfWorkListenerTimeToRun();
+
     assertEquals(1, (int) access1.readFrom("errorCausesCount"));
     final Exception cause1 = access1.readFrom("errorCauses");
     assertEquals("The state is null.", cause1.getMessage());
@@ -273,11 +293,11 @@ public class GeodeStateStoreActorIT {
 
     accessDispatcher.writeUsing("processDispatch", false);
 
-    final Entity1 entity1 = new Entity1("123", 1);
+    final Entity1 entity1 = new Entity1("101", 1);
     store.write(entity1.id, entity1, 1, interest);
-    final Entity1 entity2 = new Entity1("234", 2);
+    final Entity1 entity2 = new Entity1("202", 2);
     store.write(entity2.id, entity2, 1, interest);
-    final Entity1 entity3 = new Entity1("345", 3);
+    final Entity1 entity3 = new Entity1("303", 3);
     store.write(entity3.id, entity3, 1, interest);
 
     try {
@@ -358,19 +378,20 @@ public class GeodeStateStoreActorIT {
   private void clearCache() {
     Optional<GemFireCache> cacheOrNull = GemFireCacheProvider.getAnyInstance();
     if (cacheOrNull.isPresent()) {
-      GemFireCache cache = cacheOrNull.get();
-      Region<String, ObjectState> storeRegion = cache.getRegion(StoreName);
-      if (storeRegion != null) {
-        FunctionService
-          .onRegion(storeRegion)
-          .execute(ClearRegionFunction.class.getSimpleName());
-      }
-      Region<String, ObjectState> dispatchablesRegion = cache.getRegion(GeodeQueries.DISPATCHABLES_REGION_PATH);
-      if (dispatchablesRegion != null) {
-        FunctionService
-            .onRegion(dispatchablesRegion)
-            .execute(ClearRegionFunction.class.getSimpleName());
-      }
+      final GemFireCache cache = cacheOrNull.get();
+      clearRegion(cache, StoreName);
+      clearRegion(cache, GeodeQueries.DISPATCHABLES_REGION_PATH);
+      clearRegion(cache, GeodeQueries.EVENT_JOURNAL_REGION_PATH);
+      clearRegion(cache, GeodeQueries.UOW_REGION_PATH);
+    }
+  }
+
+  private void clearRegion(final GemFireCache cache, final String path) {
+    final Region<?,?> region = cache.getRegion(GeodeQueries.UOW_REGION_PATH);
+    if (region != null) {
+      FunctionService
+        .onRegion(region)
+        .execute(ClearRegionFunction.class.getSimpleName());
     }
   }
 
@@ -385,6 +406,15 @@ public class GeodeStateStoreActorIT {
     catch (Throwable t) {
       LOG.error("error looking up host IP address; defaulting to loopback", t);
       return InetAddress.getLoopbackAddress().getHostAddress();
+    }
+  }
+
+  private void giveUnitOfWorkListenerTimeToRun() {
+    try {
+      Thread.sleep(3000);
+    }
+    catch (Exception ex) {
+      //best efforts
     }
   }
 }

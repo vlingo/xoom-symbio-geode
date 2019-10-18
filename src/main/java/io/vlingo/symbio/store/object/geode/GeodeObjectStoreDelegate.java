@@ -6,28 +6,10 @@
 // one at https://mozilla.org/MPL/2.0/.
 package io.vlingo.symbio.store.object.geode;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-
-import org.apache.geode.cache.GemFireCache;
-import org.apache.geode.cache.Region;
-import org.apache.geode.cache.query.Query;
-import org.apache.geode.cache.query.QueryService;
-import org.apache.geode.cache.query.SelectResults;
-
 import io.vlingo.actors.Definition;
 import io.vlingo.actors.Logger;
 import io.vlingo.actors.World;
-import io.vlingo.symbio.BaseEntry;
-import io.vlingo.symbio.Entry;
-import io.vlingo.symbio.Metadata;
-import io.vlingo.symbio.State;
-import io.vlingo.symbio.StateAdapterProvider;
+import io.vlingo.symbio.*;
 import io.vlingo.symbio.store.Result;
 import io.vlingo.symbio.store.StorageException;
 import io.vlingo.symbio.store.common.geode.GemFireCacheProvider;
@@ -43,6 +25,13 @@ import io.vlingo.symbio.store.object.ObjectStoreReader.QuerySingleResult;
 import io.vlingo.symbio.store.object.QueryExpression;
 import io.vlingo.symbio.store.object.StateObject;
 import io.vlingo.symbio.store.object.StateObjectMapper;
+import org.apache.geode.cache.GemFireCache;
+import org.apache.geode.cache.Region;
+import org.apache.geode.cache.query.Query;
+import org.apache.geode.cache.query.QueryService;
+import org.apache.geode.cache.query.SelectResults;
+
+import java.util.*;
 /**
  * GeodeObjectStoreDelegate is responsible for adapting {@link io.vlingo.symbio.store.object.ObjectStore}
  * to Apache Geode.
@@ -128,14 +117,14 @@ public class GeodeObjectStoreDelegate extends GeodeDispatcherControlDelegate imp
     logger.debug("completeTransaction - entered");
     try {
       idGenerator()
-        .next(UOW_SEQUENCE_NAME)
+        .next(GeodeQueries.UOW_SEQUENCE_NAME)
         .andThenConsume(id -> {
           unitOfWork.withId(id);
           if (consistencyPolicy.isTransactional()) { /* not yet supported */
             unitOfWork.applyTo(cache());
             cache().getCacheTransactionManager().commit();
           } else {
-            regionFor(GeodeQueries.OBJECTSTORE_UOW_REGION_PATH).put(id, unitOfWork);
+            regionFor(GeodeQueries.UOW_REGION_PATH).put(id, unitOfWork);
           }
         });
     }
@@ -234,10 +223,10 @@ public class GeodeObjectStoreDelegate extends GeodeDispatcherControlDelegate imp
     try {
       for (final Entry<?> entry : entries) {
         idGenerator()
-          .next(ENTRY_SEQUENCE_NAME)
+          .next(GeodeQueries.ENTRY_SEQUENCE_NAME)
           .andThenConsume(id -> {
             ((BaseEntry)entry).__internal__setId(String.valueOf(id));
-            unitOfWork.register(id, entry, GeodeQueries.OBJECTSTORE_EVENT_JOURNAL_REGION_PATH);
+            unitOfWork.register(id, entry, GeodeQueries.EVENT_JOURNAL_REGION_PATH);
           });
       }
     }

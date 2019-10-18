@@ -17,9 +17,8 @@
 	</pdx>
 	<region name="IdSequences" refid="PROXY" />
 	<region name="Dispatchables" refid="PROXY" />
-	<region name="ObjectStoreEventJournal" refid="PROXY" />
-	<region name="ObjectStoreUnitsOfWork" refid="PROXY" />
-	<region name="StateStoreEventJournal" refid="PROXY" />
+	<region name="EventJournal" refid="PROXY" />
+	<region name="UnitsOfWork" refid="PROXY" />
 	<region name="Entity1" refid="PROXY" />
 	<region name="Person" refid="PROXY" />
 </client-cache>
