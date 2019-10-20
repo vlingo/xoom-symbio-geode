@@ -411,7 +411,7 @@ public class GeodeStateStoreActorIT {
 
   private void giveUnitOfWorkListenerTimeToRun() {
     try {
-      Thread.sleep(3000);
+      Thread.sleep(5000);
     }
     catch (Exception ex) {
       //best efforts
