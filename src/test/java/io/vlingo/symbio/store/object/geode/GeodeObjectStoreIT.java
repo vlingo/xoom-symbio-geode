@@ -96,8 +96,7 @@ public class GeodeObjectStoreIT {
     assertEquals(0L, greenLantern.version());
     objectStore.persist(greenLantern, Collections.singletonList(TestEvent.randomEvent()), persistInterest);
 
-    /* give GeodeUnitOfWorkListener time to run */
-    Thread.sleep(3000);
+    giveUnitOfWorkListenerTimeToRun();
 
     final Person storedGreenLantern = persistAccess.readFrom("persistedObject");
     assertEquals(Result.Success, persistAccess.readFrom("persistResult"));
@@ -141,8 +140,7 @@ public class GeodeObjectStoreIT {
     final Person ironMan = new Person("Iron Man", 50, 501L);
     objectStore.persistAll(Arrays.asList(greenLantern, theWasp, ironMan), persistInterest);
 
-    /* give GeodeUnitOfWorkListener time to run */
-    Thread.sleep(3000);
+    giveUnitOfWorkListenerTimeToRun();
 
     assertEquals(Result.Success, persistAccess.readFrom("persistResult"));
     assertEquals(3, (int) persistAccess.readFrom("expectedPersistCount"));
@@ -183,8 +181,7 @@ public class GeodeObjectStoreIT {
     assertEquals(0L, greenLantern.version());
     objectStore.persist(greenLantern, persistInterest);
 
-    /* give GeodeUnitOfWorkListener time to run */
-    Thread.sleep(3000);
+    giveUnitOfWorkListenerTimeToRun();
 
     assertEquals(Result.Success, persistAccess.readFrom("persistResult"));
 
@@ -212,8 +209,7 @@ public class GeodeObjectStoreIT {
     queriedPerson.withAge(31);
     objectStore.persist(queriedPerson, queryInterest.singleResult.get().updateId, updateInterest);
 
-    /* give GeodeUnitOfWorkListener time to run */
-    Thread.sleep(3000);
+    giveUnitOfWorkListenerTimeToRun();
 
     assertEquals(Result.Success, updateAccess.readFrom("persistResult"));
 
@@ -253,8 +249,7 @@ public class GeodeObjectStoreIT {
     final Person ironMan1 = new Person("Iron Man", 50, 503L);
     objectStore.persistAll(Arrays.asList(greenLantern1, theWasp1, ironMan1), persistInterest);
 
-    /* give GeodeUnitOfWorkListener time to run */
-    Thread.sleep(3000);
+    giveUnitOfWorkListenerTimeToRun();
 
     assertEquals(Result.Success, persistAccess.readFrom("persistResult"));
     assertEquals(3, (int) persistAccess.readFrom("expectedPersistCount"));
@@ -303,8 +298,7 @@ public class GeodeObjectStoreIT {
 
     objectStore.persistAll(updatedPeople, updateInterest);
 
-    /* give GeodeUnitOfWorkListener time to run */
-    Thread.sleep(3000);
+    giveUnitOfWorkListenerTimeToRun();
 
     Exception persistCause = updateAccess.readFrom("persistCause");
     assertNull(persistCause);
@@ -358,8 +352,7 @@ public class GeodeObjectStoreIT {
     final List<Source<Event>> sources = Arrays.asList(TestEvent.randomEvent(), TestEvent.randomEvent());
     objectStore.persistAll(Arrays.asList(greenLantern1, theWasp1, ironMan1), sources, persistInterest);
 
-    /* give GeodeUnitOfWorkListener time to run */
-    Thread.sleep(3000);
+    giveUnitOfWorkListenerTimeToRun();
 
     assertEquals(Result.Success, persistAccess.readFrom("persistResult"));
     assertEquals(3, (int) persistAccess.readFrom("expectedPersistCount"));
@@ -475,6 +468,15 @@ public class GeodeObjectStoreIT {
     catch (Throwable t) {
       LOG.error("error looking up host IP address; defaulting to loopback", t);
       return InetAddress.getLoopbackAddress().getHostAddress();
+    }
+  }
+
+  private void giveUnitOfWorkListenerTimeToRun() {
+    try {
+      Thread.sleep(5000);
+    }
+    catch (Exception ex) {
+      //best efforts
     }
   }
 }
