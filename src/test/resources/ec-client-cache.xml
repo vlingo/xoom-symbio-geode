@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<client-cache
+		xmlns="http://geode.apache.org/schema/cache"
+		xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+		xsi:schemaLocation="http://geode.apache.org/schema/cache http://geode.apache.org/schema/cache/cache-1.0.xsd"
+		version="1.0">
+	<pool name="serverPool" >
+		<locator host="${LOCATOR_IP}" port="${LOCATOR_PORT}"/>
+	</pool>
+	<pdx>
+		<pdx-serializer>
+			<class-name>io.vlingo.symbio.store.common.geode.pdx.DynaPdxSerializer</class-name>
+			<parameter name="provider">
+				<string>io.vlingo.symbio.store.common.geode.pdx.TestPdxSerializerProvider</string>
+			</parameter>
+		</pdx-serializer>
+	</pdx>
+	<region name="IdSequences" refid="PROXY" />
+	<region name="Dispatchables" refid="PROXY" />
+	<region name="EventJournal" refid="PROXY" />
+	<region name="UnitsOfWork" refid="PROXY" />
+	<region name="Entity1" refid="PROXY" />
+	<region name="Person" refid="PROXY" />
+</client-cache>

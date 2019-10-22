@@ -14,6 +14,7 @@ public interface GeodeQueries {
   String DISPATCHABLES_REGION_PATH = "Dispatchables";
   String EVENT_JOURNAL_REGION_PATH = "EventJournal";
   String UOW_REGION_PATH = "UnitsOfWork";
+  String SEQUENCE_REGION_PATH = "IdSequences";
 
   /* ID Sequence Names */
   String ENTRY_SEQUENCE_NAME = "Entries";

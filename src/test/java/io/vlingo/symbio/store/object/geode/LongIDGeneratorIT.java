@@ -90,7 +90,7 @@ public class LongIDGeneratorIT {
   @SuppressWarnings("unused")
   public static void beforeAnyTest() {
     Properties serverProps = new Properties();
-    serverProps.put(ConfigurationProperties.CACHE_XML_FILE, "server-cache.xml");
+    serverProps.put(ConfigurationProperties.CACHE_XML_FILE, "xserver-cache.xml");
     serverProps.put(ConfigurationProperties.LOG_LEVEL, "error");
 
     MemberVM locator = cluster.startLocatorVM(0, serverProps);
@@ -99,7 +99,7 @@ public class LongIDGeneratorIT {
 
     System.setProperty("LOCATOR_IP", ipAddress());
     System.setProperty("LOCATOR_PORT", String.valueOf(locator.getPort()));
-    System.setProperty("gemfire." + ConfigurationProperties.CACHE_XML_FILE, "client-cache.xml");
+    System.setProperty("gemfire." + ConfigurationProperties.CACHE_XML_FILE, "xclient-cache.xml");
     System.setProperty("gemfire." + ConfigurationProperties.LOG_LEVEL, "error");
   }
 

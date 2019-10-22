@@ -36,10 +36,13 @@ public class GeodeUnitOfWork {
 
   public LocalDate timestamp() { return timestamp; }
 
-  public <K,V> void register(final K key, final V value, String path) {
-    changedObjectsByPath
-      .computeIfAbsent(path, s -> new HashMap<>())
-      .put(key, value);
+  public <K,V> void register(final K key, final V value, final String path) {
+    registeredForPath(path).put(key, value);
+  }
+
+  public Map<Object, Object> registeredForPath(final String path) {
+    return changedObjectsByPath
+      .computeIfAbsent(path, s -> new HashMap<>());
   }
 
   public void applyTo(final GemFireCache cache) throws StorageException {

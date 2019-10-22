@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<cache xmlns="http://geode.apache.org/schema/cache"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://geode.apache.org/schema/cache http://geode.apache.org/schema/cache/cache-1.0.xsd"
+	version="1.0">
+	<pdx>
+		<pdx-serializer>
+			<class-name>io.vlingo.symbio.store.common.geode.pdx.DynaPdxSerializer</class-name>
+			<parameter name="provider">
+				<string>io.vlingo.symbio.store.common.geode.pdx.TestPdxSerializerProvider</string>
+			</parameter>
+		</pdx-serializer>
+	</pdx>
+	<region name="IdSequences" refid="REPLICATE" />
+	<region name="Dispatchables" refid="REPLICATE" />
+	<region name="EventJournal">
+		<region-attributes>
+			<partition-attributes redundant-copies="1">
+			</partition-attributes>
+		</region-attributes>
+	</region>
+	<region name="Entity1">
+		<region-attributes>
+			<partition-attributes colocated-with="EventJournal" redundant-copies="1">
+			</partition-attributes>
+		</region-attributes>
+	</region>
+	<region name="Person">
+		<region-attributes>
+			<partition-attributes colocated-with="EventJournal" redundant-copies="1">
+			</partition-attributes>
+		</region-attributes>
+	</region>
+	<function-service>
+		<function>
+			<class-name>io.vlingo.symbio.store.common.geode.identity.LongIDAllocator</class-name>
+		</function>
+		<function>
+			<class-name>io.vlingo.symbio.store.common.geode.functions.ClearRegionFunction</class-name>
+		</function>
+	</function-service>
+</cache>
