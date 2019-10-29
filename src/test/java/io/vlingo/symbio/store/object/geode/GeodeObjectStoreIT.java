@@ -23,6 +23,7 @@ import java.util.Optional;
 import java.util.Properties;
 import java.util.Random;
 
+import io.vlingo.symbio.store.object.*;
 import org.apache.geode.cache.GemFireCache;
 import org.apache.geode.cache.Region;
 import org.apache.geode.cache.execute.FunctionService;
@@ -55,13 +56,8 @@ import io.vlingo.symbio.store.common.geode.GemFireCacheProvider;
 import io.vlingo.symbio.store.common.geode.GeodeQueries;
 import io.vlingo.symbio.store.common.geode.functions.ClearRegionFunction;
 import io.vlingo.symbio.store.dispatch.Dispatchable;
-import io.vlingo.symbio.store.object.ListQueryExpression;
-import io.vlingo.symbio.store.object.ObjectStore;
 import io.vlingo.symbio.store.object.ObjectStoreReader.QueryMultiResults;
 import io.vlingo.symbio.store.object.ObjectStoreReader.QuerySingleResult;
-import io.vlingo.symbio.store.object.QueryExpression;
-import io.vlingo.symbio.store.object.StateObject;
-import io.vlingo.symbio.store.object.StateObjectMapper;
 import io.vlingo.symbio.store.state.MockObjectResultInterest;
 /**
  * GeodeObjectStoreIT implements
@@ -94,7 +90,7 @@ public class GeodeObjectStoreIT {
     final long greenLanternId = 300L;
     final Person greenLantern = new Person("Green Lantern", 30, greenLanternId);
     assertEquals(0L, greenLantern.version());
-    objectStore.persist(greenLantern, Collections.singletonList(TestEvent.randomEvent()), persistInterest);
+    objectStore.persist(StateSources.of(greenLantern, TestEvent.randomEvent()), persistInterest);
 
     /* give GeodeUnitOfWorkListener time to run */
     Thread.sleep(3000);
@@ -139,7 +135,7 @@ public class GeodeObjectStoreIT {
     final Person greenLantern = new Person("Green Lantern", 30, 301L);
     final Person theWasp = new Person("The Wasp", 40, 401L);
     final Person ironMan = new Person("Iron Man", 50, 501L);
-    objectStore.persistAll(Arrays.asList(greenLantern, theWasp, ironMan), persistInterest);
+    objectStore.persistAll(Arrays.asList(StateSources.of(greenLantern), StateSources.of(theWasp), StateSources.of(ironMan)), persistInterest);
 
     /* give GeodeUnitOfWorkListener time to run */
     Thread.sleep(3000);
@@ -181,7 +177,7 @@ public class GeodeObjectStoreIT {
     final long greenLanternId = 302L;
     final Person greenLantern = new Person("Green Lantern", 30, greenLanternId);
     assertEquals(0L, greenLantern.version());
-    objectStore.persist(greenLantern, persistInterest);
+    objectStore.persist(StateSources.of(greenLantern), persistInterest);
 
     /* give GeodeUnitOfWorkListener time to run */
     Thread.sleep(3000);
@@ -210,7 +206,7 @@ public class GeodeObjectStoreIT {
     final AccessSafely updateAccess = updateInterest.afterCompleting(1);
 
     queriedPerson.withAge(31);
-    objectStore.persist(queriedPerson, queryInterest.singleResult.get().updateId, updateInterest);
+    objectStore.persist(StateSources.of(queriedPerson), queryInterest.singleResult.get().updateId, updateInterest);
 
     /* give GeodeUnitOfWorkListener time to run */
     Thread.sleep(3000);
@@ -251,7 +247,7 @@ public class GeodeObjectStoreIT {
     final Person greenLantern1 = new Person("Green Lantern", 30, 303L);
     final Person theWasp1 = new Person("The Wasp", 40, 403L);
     final Person ironMan1 = new Person("Iron Man", 50, 503L);
-    objectStore.persistAll(Arrays.asList(greenLantern1, theWasp1, ironMan1), persistInterest);
+    objectStore.persistAll(Arrays.asList(StateSources.of(greenLantern1), StateSources.of(theWasp1), StateSources.of(ironMan1)), persistInterest);
 
     /* give GeodeUnitOfWorkListener time to run */
     Thread.sleep(3000);
@@ -299,9 +295,7 @@ public class GeodeObjectStoreIT {
     final Person theWasp2 = queriedTheWasp1.withName(theWasp2Name);
     final Person ironMan2 = queriedIronMan1.withName(ironMan2Name);
 
-    Collection<Person> updatedPeople = Arrays.asList(greenLantern2, theWasp2, ironMan2);
-
-    objectStore.persistAll(updatedPeople, updateInterest);
+    objectStore.persistAll(Arrays.asList(StateSources.of(greenLantern2), StateSources.of(theWasp2), StateSources.of(ironMan2)), updateInterest);
 
     /* give GeodeUnitOfWorkListener time to run */
     Thread.sleep(3000);
@@ -355,8 +349,12 @@ public class GeodeObjectStoreIT {
     final Person theWasp1 = new Person("The Wasp", 40, 404L);
     final Person ironMan1 = new Person("Iron Man", 50, 504L);
 
-    final List<Source<Event>> sources = Arrays.asList(TestEvent.randomEvent(), TestEvent.randomEvent());
-    objectStore.persistAll(Arrays.asList(greenLantern1, theWasp1, ironMan1), sources, persistInterest);
+    objectStore.persistAll(
+      Arrays.asList(
+        StateSources.of(greenLantern1, TestEvent.randomEvent()),
+        StateSources.of(theWasp1, TestEvent.randomEvent()),
+        StateSources.of(ironMan1, TestEvent.randomEvent())
+      ), persistInterest);
 
     /* give GeodeUnitOfWorkListener time to run */
     Thread.sleep(3000);
@@ -384,7 +382,7 @@ public class GeodeObjectStoreIT {
       Assert.assertNotNull(dispatchable.id());
       Assert.assertTrue(dispatchable.state().isPresent());
       final Collection<Entry<?>> dispatchedEntries = dispatchable.entries();
-      Assert.assertEquals(sources.size(), dispatchedEntries.size());
+      Assert.assertEquals(3, dispatchedEntries.size());
     }
   }
 
