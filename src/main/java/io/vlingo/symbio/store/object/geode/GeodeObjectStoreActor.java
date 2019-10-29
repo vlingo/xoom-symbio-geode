@@ -6,24 +6,13 @@
 // one at https://mozilla.org/MPL/2.0/.
 package io.vlingo.symbio.store.object.geode;
 
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.stream.Collectors;
-
 import io.vlingo.actors.Actor;
 import io.vlingo.actors.Definition;
 import io.vlingo.common.Completes;
 import io.vlingo.common.Failure;
 import io.vlingo.common.Success;
 import io.vlingo.common.serialization.JsonSerialization;
-import io.vlingo.symbio.Entry;
-import io.vlingo.symbio.EntryAdapterProvider;
-import io.vlingo.symbio.Metadata;
-import io.vlingo.symbio.Source;
-import io.vlingo.symbio.State;
+import io.vlingo.symbio.*;
 import io.vlingo.symbio.store.EntryReader;
 import io.vlingo.symbio.store.Result;
 import io.vlingo.symbio.store.StorageException;
@@ -32,10 +21,14 @@ import io.vlingo.symbio.store.common.geode.dispatch.GeodeDispatcherControlDelega
 import io.vlingo.symbio.store.dispatch.Dispatcher;
 import io.vlingo.symbio.store.dispatch.DispatcherControl;
 import io.vlingo.symbio.store.dispatch.control.DispatcherControlActor;
-import io.vlingo.symbio.store.object.ObjectStore;
-import io.vlingo.symbio.store.object.ObjectStoreDelegate;
-import io.vlingo.symbio.store.object.QueryExpression;
-import io.vlingo.symbio.store.object.StateObject;
+import io.vlingo.symbio.store.object.*;
+
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.stream.Collectors;
 /**
  * GeodeObjectStoreActor is an {@link ObjectStore} that knows how to
  * read/write {@link StateObject} from/to Apache Geode.
@@ -98,8 +91,9 @@ public class GeodeObjectStoreActor extends Actor implements ObjectStore {
   }
 
   @Override
-  public <T extends StateObject, E> void persist(final T objectToPersist, final List<Source<E>> sources, final Metadata metadata, final long updateId,
-                                                      final PersistResultInterest interest, final Object object) {
+  public <T extends StateObject, E> void persist(StateSources<T, E> stateSources, Metadata metadata, long updateId, PersistResultInterest interest, Object object) {
+    final List<Source<E>> sources = stateSources.sources();
+    final T objectToPersist = stateSources.stateObject();
     try {
       storeDelegate.beginTransaction();
 
@@ -132,34 +126,39 @@ public class GeodeObjectStoreActor extends Actor implements ObjectStore {
   }
 
   @Override
-  public <T extends StateObject, E> void persistAll(final Collection<T> objectsToPersist, final List<Source<E>> sources, final Metadata metadata,
-                                                         final long updateId, final PersistResultInterest interest, final Object object) {
+  public <T extends StateObject, E> void persistAll(Collection<StateSources<T, E>> allStateSources, Metadata metadata, long updateId, PersistResultInterest interest, Object object) {
+    final Collection<T> allObjectsToPersist = new ArrayList<>();
+    final List<GeodeDispatchable<State<?>>> allDispatchables = new ArrayList<>(allStateSources.size());
     try {
-      final List<Entry<?>> entries = entryAdapterProvider.asEntries(sources, metadata);
-      final List<GeodeDispatchable<State<?>>> dispatchables = new ArrayList<>(objectsToPersist.size());
-
       storeDelegate.beginTransaction();
+      for (StateSources<T,E> stateSources : allStateSources) {
+        final T objectToPersist = stateSources.stateObject();
+        final List<Source<E>> sources = stateSources.sources();
 
-      final Collection<State<?>> states = storeDelegate.persistAll(objectsToPersist, updateId, metadata);
-      states.forEach(state -> dispatchables.add(buildDispatchable(state, entries)));
+        final List<Entry<?>> entries = entryAdapterProvider.asEntries(sources, metadata);
+        storeDelegate.persistEntries(entries);
 
-      storeDelegate.persistEntries(entries);
-      dispatchables.forEach(storeDelegate::persistDispatchable);
+        final State<?> state = storeDelegate.persist(objectToPersist, updateId, metadata);
+        allObjectsToPersist.add(objectToPersist);
 
+        final GeodeDispatchable<State<?>> dispatchable = buildDispatchable(state, entries);
+        storeDelegate.persistDispatchable(dispatchable);
+        allDispatchables.add(dispatchable);
+      }
       storeDelegate.completeTransaction();
 
-      dispatchables.forEach(this::dispatch);
-      interest.persistResultedIn(Success.of(Result.Success), objectsToPersist, objectsToPersist.size(), objectsToPersist.size(), object);
+      allDispatchables.forEach(this::dispatch);
+      interest.persistResultedIn(Success.of(Result.Success), allObjectsToPersist, allObjectsToPersist.size(), allObjectsToPersist.size(), object);
     }
     catch (final StorageException ex) {
-      logger().error("error persisting " + JsonSerialization.serialized(objectsToPersist), ex);
+      logger().error("error persisting " + JsonSerialization.serialized(allObjectsToPersist), ex);
       storeDelegate.failTransaction();
-      interest.persistResultedIn(Failure.of(ex), objectsToPersist, 1, 0, object);
+      interest.persistResultedIn(Failure.of(ex), allObjectsToPersist, 1, 0, object);
     }
     catch (Exception ex) {
-      logger().error("error persisting " + JsonSerialization.serialized(objectsToPersist), ex);
+      logger().error("error persisting " + JsonSerialization.serialized(allObjectsToPersist), ex);
       storeDelegate.failTransaction();
-      interest.persistResultedIn(Failure.of(new StorageException(Result.Failure, ex.getMessage(), ex)), objectsToPersist, objectsToPersist.size(), 0, object);
+      interest.persistResultedIn(Failure.of(new StorageException(Result.Failure, ex.getMessage(), ex)), allObjectsToPersist, allObjectsToPersist.size(), 0, object);
     }
   }
 
