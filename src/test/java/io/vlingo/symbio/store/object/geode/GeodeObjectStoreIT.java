@@ -14,7 +14,6 @@ import static org.junit.Assert.assertTrue;
 import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -23,7 +22,6 @@ import java.util.Optional;
 import java.util.Properties;
 import java.util.Random;
 
-import io.vlingo.symbio.store.object.*;
 import org.apache.geode.cache.GemFireCache;
 import org.apache.geode.cache.Region;
 import org.apache.geode.cache.execute.FunctionService;
@@ -44,20 +42,24 @@ import io.vlingo.actors.World;
 import io.vlingo.actors.testkit.AccessSafely;
 import io.vlingo.symbio.Entry;
 import io.vlingo.symbio.EntryAdapterProvider;
-import io.vlingo.symbio.Source;
 import io.vlingo.symbio.State;
 import io.vlingo.symbio.StateAdapterProvider;
 import io.vlingo.symbio.store.Result;
 import io.vlingo.symbio.store.common.MockObjectDispatcher;
-import io.vlingo.symbio.store.common.event.Event;
 import io.vlingo.symbio.store.common.event.TestEvent;
 import io.vlingo.symbio.store.common.event.TestEventAdapter;
 import io.vlingo.symbio.store.common.geode.GemFireCacheProvider;
 import io.vlingo.symbio.store.common.geode.GeodeQueries;
 import io.vlingo.symbio.store.common.geode.functions.ClearRegionFunction;
 import io.vlingo.symbio.store.dispatch.Dispatchable;
+import io.vlingo.symbio.store.object.ListQueryExpression;
+import io.vlingo.symbio.store.object.ObjectStore;
 import io.vlingo.symbio.store.object.ObjectStoreReader.QueryMultiResults;
 import io.vlingo.symbio.store.object.ObjectStoreReader.QuerySingleResult;
+import io.vlingo.symbio.store.object.QueryExpression;
+import io.vlingo.symbio.store.object.StateObject;
+import io.vlingo.symbio.store.object.StateObjectMapper;
+import io.vlingo.symbio.store.object.StateSources;
 import io.vlingo.symbio.store.state.MockObjectResultInterest;
 /**
  * GeodeObjectStoreIT implements
@@ -363,15 +365,9 @@ public class GeodeObjectStoreIT {
     assertEquals(3, (int) persistAccess.readFrom("expectedPersistCount"));
     assertEquals(3, (int) persistAccess.readFrom("actualPersistCount"));
 
-    try {
-      Thread.sleep(3000);
-    } catch (InterruptedException ex) {
-      //ignored
-    }
-
     accessDispatcher.writeUsing("processDispatch", true);
 
-    final Map<String, Dispatchable<Entry<?>, State<?>>> dispatched = dispatcher.getDispatched();
+    final Map<String, Dispatchable<Entry<?>, State<?>>> dispatched = accessDispatcher.readFrom("dispatched"); // dispatcher.getDispatched();
     assertEquals(3, dispatched.size());
 
     final int dispatchAttemptCount = accessDispatcher.readFrom("dispatchAttemptCount");
@@ -381,8 +377,7 @@ public class GeodeObjectStoreIT {
       Assert.assertNotNull(dispatchable.createdOn());
       Assert.assertNotNull(dispatchable.id());
       Assert.assertTrue(dispatchable.state().isPresent());
-      final Collection<Entry<?>> dispatchedEntries = dispatchable.entries();
-      Assert.assertEquals(3, dispatchedEntries.size());
+      Assert.assertEquals(3, dispatched.size());
     }
   }
 

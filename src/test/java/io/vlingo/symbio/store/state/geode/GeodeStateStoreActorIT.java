@@ -268,7 +268,7 @@ public class GeodeStateStoreActorIT {
 
   @Test
   public void testRedispatch() {
-    interest.afterCompleting(1);
+    final AccessSafely access = interest.afterCompleting(3);
     final AccessSafely accessDispatcher = dispatcher.afterCompleting(5);
 
     accessDispatcher.writeUsing("processDispatch", false);
@@ -280,12 +280,8 @@ public class GeodeStateStoreActorIT {
     final Entity1 entity3 = new Entity1("345", 3);
     store.write(entity3.id, entity3, 1, interest);
 
-    try {
-      Thread.sleep(6000);
-    }
-    catch (InterruptedException ex) {
-      //ignored
-    }
+    final int readsTimes = access.readFrom("writeObjectResultedIn");
+    assertEquals(3, readsTimes);
 
     accessDispatcher.writeUsing("processDispatch", true);
 
