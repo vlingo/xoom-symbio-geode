@@ -6,13 +6,24 @@
 // one at https://mozilla.org/MPL/2.0/.
 package io.vlingo.symbio.store.object.geode;
 
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.stream.Collectors;
+
 import io.vlingo.actors.Actor;
 import io.vlingo.actors.Definition;
 import io.vlingo.common.Completes;
 import io.vlingo.common.Failure;
 import io.vlingo.common.Success;
 import io.vlingo.common.serialization.JsonSerialization;
-import io.vlingo.symbio.*;
+import io.vlingo.symbio.Entry;
+import io.vlingo.symbio.EntryAdapterProvider;
+import io.vlingo.symbio.Metadata;
+import io.vlingo.symbio.Source;
+import io.vlingo.symbio.State;
 import io.vlingo.symbio.store.EntryReader;
 import io.vlingo.symbio.store.Result;
 import io.vlingo.symbio.store.StorageException;
@@ -21,14 +32,11 @@ import io.vlingo.symbio.store.common.geode.dispatch.GeodeDispatcherControlDelega
 import io.vlingo.symbio.store.dispatch.Dispatcher;
 import io.vlingo.symbio.store.dispatch.DispatcherControl;
 import io.vlingo.symbio.store.dispatch.control.DispatcherControlActor;
-import io.vlingo.symbio.store.object.*;
-
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.stream.Collectors;
+import io.vlingo.symbio.store.object.ObjectStore;
+import io.vlingo.symbio.store.object.ObjectStoreDelegate;
+import io.vlingo.symbio.store.object.QueryExpression;
+import io.vlingo.symbio.store.object.StateObject;
+import io.vlingo.symbio.store.object.StateSources;
 /**
  * GeodeObjectStoreActor is an {@link ObjectStore} that knows how to
  * read/write {@link StateObject} from/to Apache Geode.
@@ -101,7 +109,8 @@ public class GeodeObjectStoreActor extends Actor implements ObjectStore {
       final State<?> raw = storeDelegate.persist(objectToPersist, updateId, metadata);
 
       /* persist the journal entries */
-      final List<Entry<?>> entries = entryAdapterProvider.asEntries(sources, metadata);
+      final int entryVersion = (int) stateSources.stateObject().version();
+      final List<Entry<?>> entries = entryAdapterProvider.asEntries(sources, entryVersion, metadata);
       storeDelegate.persistEntries(entries);
 
       /* persist the dispatchables */
@@ -135,7 +144,8 @@ public class GeodeObjectStoreActor extends Actor implements ObjectStore {
         final T objectToPersist = stateSources.stateObject();
         final List<Source<E>> sources = stateSources.sources();
 
-        final List<Entry<?>> entries = entryAdapterProvider.asEntries(sources, metadata);
+        final int entryVersion = (int) stateSources.stateObject().version();
+        final List<Entry<?>> entries = entryAdapterProvider.asEntries(sources, entryVersion, metadata);
         storeDelegate.persistEntries(entries);
 
         final State<?> state = storeDelegate.persist(objectToPersist, updateId, metadata);

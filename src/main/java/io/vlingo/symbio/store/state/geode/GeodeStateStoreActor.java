@@ -238,7 +238,7 @@ public class GeodeStateStoreActor extends Actor implements StateStore {
       : stateAdapterProvider.asRaw(id, state, stateVersion, metadata);
 
     // TODO: Write sources
-    final List<Entry<?>> entries = entryAdapterProvider.asEntries(sources, metadata);// final List<Entry<?>> entries =
+    final List<Entry<?>> entries = entryAdapterProvider.asEntries(sources, stateVersion, metadata);// final List<Entry<?>> entries =
 
     try {
       final State<Object> persistedState = typeStore.putIfAbsent(id, raw);
