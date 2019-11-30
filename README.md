@@ -30,13 +30,13 @@ See `GeodeObjectStoreActor`
     <dependency>
       <groupId>io.vlingo</groupId>
       <artifactId>vlingo-symbio</artifactId>
-      <version>0.9.2-RC3</version>
+      <version>0.9.3-RC4</version>
       <scope>compile</scope>
     </dependency>
     <dependency>
       <groupId>io.vlingo</groupId>
       <artifactId>vlingo-symbio-geode</artifactId>
-      <version>0.9.2-RC3</version>
+      <version>0.9.3-RC4</version>
       <scope>compile</scope>
     </dependency>
   </dependencies>
@@ -44,8 +44,8 @@ See `GeodeObjectStoreActor`
 
 ```gradle
 dependencies {
-    compile 'io.vlingo:vlingo-symbio:0.9.2-RC3'
-    compile 'io.vlingo:vlingo-symbio-geode:0.9.2-RC3'
+    compile 'io.vlingo:vlingo-symbio:0.9.3-RC4'
+    compile 'io.vlingo:vlingo-symbio-geode:0.9.3-RC4'
 }
 
 repositories {
