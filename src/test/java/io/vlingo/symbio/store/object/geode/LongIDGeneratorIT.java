@@ -31,6 +31,7 @@ import io.vlingo.actors.World;
 import io.vlingo.symbio.store.common.geode.GemFireCacheProvider;
 import io.vlingo.symbio.store.common.geode.functions.ClearRegionFunction;
 import io.vlingo.symbio.store.common.geode.identity.IDGenerator;
+import io.vlingo.symbio.store.common.geode.identity.IDGenerator.LongIDGeneratorInstantiator;
 import io.vlingo.symbio.store.common.geode.identity.LongIDGenerator;
 import io.vlingo.symbio.store.common.geode.identity.LongIDGeneratorActor;
 import io.vlingo.symbio.store.common.geode.identity.LongSequence;
@@ -71,7 +72,7 @@ public class LongIDGeneratorIT {
       IDGenerator.class,
       Definition.has(
         LongIDGeneratorActor.class,
-        Definition.parameters(4L)));
+        new LongIDGeneratorInstantiator(4L)));
 
     String customerSeq = "test.Customer";
     String productSeq = "test.Product";

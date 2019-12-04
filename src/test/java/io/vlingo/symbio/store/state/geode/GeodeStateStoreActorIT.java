@@ -44,12 +44,15 @@ import io.vlingo.symbio.store.common.event.TestEvent;
 import io.vlingo.symbio.store.common.event.TestEventAdapter;
 import io.vlingo.symbio.store.common.geode.GemFireCacheProvider;
 import io.vlingo.symbio.store.common.geode.GeodeQueries;
+import io.vlingo.symbio.store.common.geode.dispatch.GeodeDispatchable;
 import io.vlingo.symbio.store.common.geode.functions.ClearRegionFunction;
+import io.vlingo.symbio.store.dispatch.Dispatcher;
 import io.vlingo.symbio.store.state.Entity1;
 import io.vlingo.symbio.store.state.Entity1.Entity1StateAdapter;
 import io.vlingo.symbio.store.state.MockObjectResultInterest;
 import io.vlingo.symbio.store.state.StateStore;
 import io.vlingo.symbio.store.state.StateTypeStateStoreMap;
+import io.vlingo.symbio.store.state.geode.GeodeStateStoreActor.GeodeStateStoreInstantiator;
 /**
  * GemFireStateStoreTest is responsible for testing {@link GeodeStateStoreActor}.
  */
@@ -332,7 +335,7 @@ public class GeodeStateStoreActorIT {
       StateStore.class,
       Definition.has(
         GeodeStateStoreActor.class,
-        Definition.parameters(originatorId, dispatcher, checkConfirmationExpirationInterval, confirmationExpiration)));
+        new GeodeStateStoreInstantiator(originatorId, dispatcher(dispatcher), checkConfirmationExpirationInterval, confirmationExpiration)));
 
     StateTypeStateStoreMap.stateTypeToStoreName(Entity1.class, StoreName);
   }
@@ -348,6 +351,11 @@ public class GeodeStateStoreActorIT {
     world.terminate();
     world = null;
     store = null;
+  }
+
+  @SuppressWarnings({ "unchecked", "rawtypes" })
+  private Dispatcher<GeodeDispatchable<ObjectState<Object>>> dispatcher(MockObjectDispatcher dispatcher) {
+    return (Dispatcher) dispatcher;
   }
 
   @SuppressWarnings("rawtypes")

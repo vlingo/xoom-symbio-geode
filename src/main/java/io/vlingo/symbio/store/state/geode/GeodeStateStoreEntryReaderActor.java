@@ -9,11 +9,17 @@ package io.vlingo.symbio.store.state.geode;
 import java.util.List;
 
 import io.vlingo.actors.Actor;
+import io.vlingo.actors.ActorInstantiator;
 import io.vlingo.common.Completes;
 import io.vlingo.symbio.Entry;
+import io.vlingo.symbio.store.EntryReader;
 import io.vlingo.symbio.store.state.StateStoreEntryReader;
 
 public class GeodeStateStoreEntryReaderActor<T extends Entry<?>> extends Actor implements StateStoreEntryReader<T> {
+
+  public GeodeStateStoreEntryReaderActor(final Advice advice, final String name) {
+    // TODO Auto-generated constructor stub
+  }
 
   @Override
   public void close() {
@@ -65,5 +71,26 @@ public class GeodeStateStoreEntryReaderActor<T extends Entry<?>> extends Actor i
   public Completes<Long> size() {
     // TODO Auto-generated method stub
     return null;
+  }
+
+  public static class GeodeStateStoreEntryReaderInstantiator<T extends Entry<?>> implements ActorInstantiator<GeodeStateStoreEntryReaderActor<T>> {
+    private final EntryReader.Advice advice;
+    private final String name;
+
+    public GeodeStateStoreEntryReaderInstantiator(final EntryReader.Advice advice, final String name) {
+      this.advice = advice;
+      this.name = name;
+    }
+
+    @Override
+    public GeodeStateStoreEntryReaderActor<T> instantiate() {
+      return new GeodeStateStoreEntryReaderActor<>(advice, name);
+    }
+
+    @Override
+    @SuppressWarnings({ "rawtypes", "unchecked" })
+    public Class<GeodeStateStoreEntryReaderActor<T>> type() {
+      return (Class) GeodeStateStoreEntryReaderActor.class;
+    }
   }
 }

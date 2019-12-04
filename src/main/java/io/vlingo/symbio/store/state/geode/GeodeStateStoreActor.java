@@ -16,6 +16,7 @@ import org.apache.geode.cache.GemFireCache;
 import org.apache.geode.cache.Region;
 
 import io.vlingo.actors.Actor;
+import io.vlingo.actors.ActorInstantiator;
 import io.vlingo.actors.Definition;
 import io.vlingo.common.Completes;
 import io.vlingo.common.Failure;
@@ -36,10 +37,12 @@ import io.vlingo.symbio.store.common.geode.dispatch.GeodeDispatchable;
 import io.vlingo.symbio.store.common.geode.dispatch.GeodeDispatcherControlDelegate;
 import io.vlingo.symbio.store.dispatch.Dispatcher;
 import io.vlingo.symbio.store.dispatch.DispatcherControl;
+import io.vlingo.symbio.store.dispatch.DispatcherControl.DispatcherControlInstantiator;
 import io.vlingo.symbio.store.dispatch.control.DispatcherControlActor;
 import io.vlingo.symbio.store.state.StateStore;
 import io.vlingo.symbio.store.state.StateStoreEntryReader;
 import io.vlingo.symbio.store.state.StateTypeStateStoreMap;
+import io.vlingo.symbio.store.state.geode.GeodeStateStoreEntryReaderActor.GeodeStateStoreEntryReaderInstantiator;
 /**
  * GeodeStateStoreActor is responsible for reading and writing
  * objects from/to a GemFire cache.
@@ -63,6 +66,7 @@ public class GeodeStateStoreActor extends Actor implements StateStore {
             CONFIRMATION_EXPIRATION_DEFAULT);
   }
 
+  @SuppressWarnings({ "unchecked", "rawtypes" })
   public GeodeStateStoreActor(final String originatorId, final Dispatcher<GeodeDispatchable<ObjectState<Object>>> dispatcher,
           long checkConfirmationExpirationInterval, final long confirmationExpiration) {
 
@@ -84,7 +88,7 @@ public class GeodeStateStoreActor extends Actor implements StateStore {
       DispatcherControl.class,
       Definition.has(
         DispatcherControlActor.class,
-        Definition.parameters(dispatcher, controlDelegate, checkConfirmationExpirationInterval, confirmationExpiration))
+        new DispatcherControlInstantiator(dispatcher, controlDelegate, checkConfirmationExpirationInterval, confirmationExpiration))
     );
   }
 
@@ -110,7 +114,7 @@ public class GeodeStateStoreActor extends Actor implements StateStore {
     if (reader == null) {
       final EntryReader.Advice advice =
               new EntryReader.Advice(null, GeodeStateStoreEntryReaderActor.class,  null, null, null, null, null);
-      reader = childActorFor(StateStoreEntryReader.class, Definition.has(advice.entryReaderClass, Definition.parameters(advice, name)));
+      reader = childActorFor(StateStoreEntryReader.class, Definition.has(advice.entryReaderClass, new GeodeStateStoreEntryReaderInstantiator<>(advice, name)));
       entryReaders.put(name, reader);
     }
     return completes().with((StateStoreEntryReader<ET>) reader);
@@ -278,6 +282,34 @@ public class GeodeStateStoreActor extends Actor implements StateStore {
     }
     else {
       throw new RuntimeException("no GemFireCache has been created in this JVM");
+    }
+  }
+
+  public static class GeodeStateStoreInstantiator implements ActorInstantiator<GeodeStateStoreActor> {
+    private final String originatorId;
+    private final Dispatcher<GeodeDispatchable<ObjectState<Object>>> dispatcher;
+    private final long checkConfirmationExpirationInterval;
+    private final long confirmationExpiration;
+
+    public GeodeStateStoreInstantiator(
+            final String originatorId,
+            final Dispatcher<GeodeDispatchable<ObjectState<Object>>> dispatcher,
+            final long checkConfirmationExpirationInterval,
+            final long confirmationExpiration) {
+      this.originatorId = originatorId;
+      this.dispatcher = dispatcher;
+      this.checkConfirmationExpirationInterval = checkConfirmationExpirationInterval;
+      this.confirmationExpiration = confirmationExpiration;
+    }
+
+    @Override
+    public GeodeStateStoreActor instantiate() {
+      return new GeodeStateStoreActor(originatorId, dispatcher, checkConfirmationExpirationInterval, confirmationExpiration);
+    }
+
+    @Override
+    public Class<GeodeStateStoreActor> type() {
+      return GeodeStateStoreActor.class;
     }
   }
 }

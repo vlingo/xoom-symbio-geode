@@ -34,6 +34,7 @@ import io.vlingo.symbio.store.common.geode.GemFireCacheProvider;
 import io.vlingo.symbio.store.common.geode.GeodeQueries;
 import io.vlingo.symbio.store.common.geode.dispatch.GeodeDispatcherControlDelegate;
 import io.vlingo.symbio.store.common.geode.identity.IDGenerator;
+import io.vlingo.symbio.store.common.geode.identity.IDGenerator.LongIDGeneratorInstantiator;
 import io.vlingo.symbio.store.common.geode.identity.LongIDGeneratorActor;
 import io.vlingo.symbio.store.common.geode.uow.GeodeUnitOfWork;
 import io.vlingo.symbio.store.dispatch.Dispatchable;
@@ -303,7 +304,7 @@ public class GeodeObjectStoreDelegate extends GeodeDispatcherControlDelegate imp
         IDGenerator.class,
         Definition.has(
           LongIDGeneratorActor.class,
-          Definition.parameters(1L)));
+          new LongIDGeneratorInstantiator(1L)));
     }
     return idGenerator;
   }

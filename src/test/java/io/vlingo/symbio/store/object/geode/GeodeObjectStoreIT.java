@@ -50,8 +50,10 @@ import io.vlingo.symbio.store.common.event.TestEvent;
 import io.vlingo.symbio.store.common.event.TestEventAdapter;
 import io.vlingo.symbio.store.common.geode.GemFireCacheProvider;
 import io.vlingo.symbio.store.common.geode.GeodeQueries;
+import io.vlingo.symbio.store.common.geode.dispatch.GeodeDispatchable;
 import io.vlingo.symbio.store.common.geode.functions.ClearRegionFunction;
 import io.vlingo.symbio.store.dispatch.Dispatchable;
+import io.vlingo.symbio.store.dispatch.Dispatcher;
 import io.vlingo.symbio.store.object.ListQueryExpression;
 import io.vlingo.symbio.store.object.ObjectStore;
 import io.vlingo.symbio.store.object.ObjectStoreReader.QueryMultiResults;
@@ -60,6 +62,7 @@ import io.vlingo.symbio.store.object.QueryExpression;
 import io.vlingo.symbio.store.object.StateObject;
 import io.vlingo.symbio.store.object.StateObjectMapper;
 import io.vlingo.symbio.store.object.StateSources;
+import io.vlingo.symbio.store.object.geode.GeodeObjectStoreActor.GeodeObjectStoreInstantiator;
 import io.vlingo.symbio.store.state.MockObjectResultInterest;
 /**
  * GeodeObjectStoreIT implements
@@ -412,7 +415,7 @@ public class GeodeObjectStoreIT {
             ObjectStore.class,
             Definition.has(
               GeodeObjectStoreActor.class,
-              Definition.parameters(originatorId, storeDelegate, dispatcher))
+              new GeodeObjectStoreInstantiator(originatorId, storeDelegate, dispatcher(dispatcher)))
     );
     registeredMappings = new ArrayList<>();
   }
@@ -430,6 +433,11 @@ public class GeodeObjectStoreIT {
     world = null;
     objectStore = null;
     storeDelegate.close();
+  }
+
+  @SuppressWarnings({ "unchecked", "rawtypes" })
+  private Dispatcher<GeodeDispatchable<State<?>>> dispatcher(MockObjectDispatcher dispatcher) {
+    return (Dispatcher) dispatcher;
   }
 
   private void clearCache() {

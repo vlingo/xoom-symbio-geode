@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import io.vlingo.actors.Actor;
+import io.vlingo.actors.ActorInstantiator;
 import io.vlingo.actors.Definition;
 import io.vlingo.common.Completes;
 import io.vlingo.common.Failure;
@@ -31,6 +32,7 @@ import io.vlingo.symbio.store.common.geode.dispatch.GeodeDispatchable;
 import io.vlingo.symbio.store.common.geode.dispatch.GeodeDispatcherControlDelegate;
 import io.vlingo.symbio.store.dispatch.Dispatcher;
 import io.vlingo.symbio.store.dispatch.DispatcherControl;
+import io.vlingo.symbio.store.dispatch.DispatcherControl.DispatcherControlInstantiator;
 import io.vlingo.symbio.store.dispatch.control.DispatcherControlActor;
 import io.vlingo.symbio.store.object.ObjectStore;
 import io.vlingo.symbio.store.object.ObjectStoreDelegate;
@@ -63,6 +65,7 @@ public class GeodeObjectStoreActor extends Actor implements ObjectStore {
       CONFIRMATION_EXPIRATION_DEFAULT);
   }
 
+  @SuppressWarnings({ "unchecked", "rawtypes" })
   public GeodeObjectStoreActor(final String originatorId,
                                final GeodeObjectStoreDelegate storeDelegate,
                                final Dispatcher<GeodeDispatchable<State<?>>> dispatcher,
@@ -78,7 +81,7 @@ public class GeodeObjectStoreActor extends Actor implements ObjectStore {
       DispatcherControl.class,
       Definition.has(
         DispatcherControlActor.class,
-        Definition.parameters(dispatcher, controlDelegate, checkConfirmationExpirationInterval, confirmationExpiration))
+        new DispatcherControlInstantiator(dispatcher, controlDelegate, checkConfirmationExpirationInterval, confirmationExpiration))
     );
   }
 
@@ -226,5 +229,30 @@ public class GeodeObjectStoreActor extends Actor implements ObjectStore {
 
   private static String getDispatchId(final State<?> raw, final List<Entry<?>> entries) {
     return raw.id + ":" + entries.stream().map(Entry::id).collect(Collectors.joining(":"));
+  }
+
+  public static class GeodeObjectStoreInstantiator implements ActorInstantiator<GeodeObjectStoreActor> {
+    private final String originatorId;
+    private final GeodeObjectStoreDelegate delegate;
+    private final Dispatcher<GeodeDispatchable<State<?>>> dispatcher;
+
+    public GeodeObjectStoreInstantiator(
+            final String originatorId,
+            final GeodeObjectStoreDelegate delegate,
+            final Dispatcher<GeodeDispatchable<State<?>>> dispatcher) {
+      this.originatorId = originatorId;
+      this.dispatcher = dispatcher;
+      this.delegate = delegate;
+    }
+
+    @Override
+    public GeodeObjectStoreActor instantiate() {
+      return new GeodeObjectStoreActor(originatorId, delegate, dispatcher);
+    }
+
+    @Override
+    public Class<GeodeObjectStoreActor> type() {
+      return GeodeObjectStoreActor.class;
+    }
   }
 }
