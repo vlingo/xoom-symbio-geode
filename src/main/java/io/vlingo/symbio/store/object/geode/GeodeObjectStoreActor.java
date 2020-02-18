@@ -8,6 +8,7 @@ package io.vlingo.symbio.store.object.geode;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -52,7 +53,7 @@ public class GeodeObjectStoreActor extends Actor implements ObjectStore {
   private final String originatorId;
 
   private final DispatcherControl dispatcherControl;
-  private final Dispatcher<GeodeDispatchable<State<?>>> dispatcher;
+  private final List<Dispatcher<GeodeDispatchable<State<?>>>> dispatchers;
   private final EntryAdapterProvider entryAdapterProvider;
   private final ObjectStoreDelegate<Entry<?>, State<?>> storeDelegate;
 
@@ -68,21 +69,29 @@ public class GeodeObjectStoreActor extends Actor implements ObjectStore {
   @SuppressWarnings({ "unchecked", "rawtypes" })
   public GeodeObjectStoreActor(final String originatorId,
                                final GeodeObjectStoreDelegate storeDelegate,
-                               final Dispatcher<GeodeDispatchable<State<?>>> dispatcher,
-                               long checkConfirmationExpirationInterval, final long confirmationExpiration) {
+                               final List<Dispatcher<GeodeDispatchable<State<?>>>> dispatchers,
+                               long checkConfirmationExpirationInterval,
+                               final long confirmationExpiration) {
     this.originatorId = originatorId;
     this.storeDelegate = storeDelegate;
 
     this.entryAdapterProvider = EntryAdapterProvider.instance(stage().world());
 
     final GeodeDispatcherControlDelegate controlDelegate = new GeodeDispatcherControlDelegate(originatorId);
-    this.dispatcher = dispatcher;
+    this.dispatchers = dispatchers;
     this.dispatcherControl = stage().actorFor(
       DispatcherControl.class,
       Definition.has(
         DispatcherControlActor.class,
-        new DispatcherControlInstantiator(dispatcher, controlDelegate, checkConfirmationExpirationInterval, confirmationExpiration))
+        new DispatcherControlInstantiator(dispatchers, controlDelegate, checkConfirmationExpirationInterval, confirmationExpiration))
     );
+  }
+
+  public GeodeObjectStoreActor(final String originatorId,
+                               final GeodeObjectStoreDelegate storeDelegate,
+                               final Dispatcher<GeodeDispatchable<State<?>>> dispatcher,
+                               long checkConfirmationExpirationInterval, final long confirmationExpiration) {
+    this(originatorId, storeDelegate, Arrays.asList(dispatcher), checkConfirmationExpirationInterval, confirmationExpiration);
   }
 
   @Override
@@ -219,7 +228,7 @@ public class GeodeObjectStoreActor extends Actor implements ObjectStore {
   }
 
   private void dispatch(final GeodeDispatchable<State<?>> geodeDispatchable) {
-    this.dispatcher.dispatch(geodeDispatchable);
+    this.dispatchers.forEach(d -> d.dispatch(geodeDispatchable));
   }
 
   private GeodeDispatchable<State<?>> buildDispatchable(final State<?> state, final List<Entry<?>> entries) {

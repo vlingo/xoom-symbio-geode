@@ -12,6 +12,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import java.net.InetAddress;
+import java.util.Arrays;
 import java.util.Optional;
 import java.util.Properties;
 
@@ -335,7 +336,7 @@ public class GeodeStateStoreActorIT {
       StateStore.class,
       Definition.has(
         GeodeStateStoreActor.class,
-        new GeodeStateStoreInstantiator(originatorId, dispatcher(dispatcher), checkConfirmationExpirationInterval, confirmationExpiration)));
+        new GeodeStateStoreInstantiator(originatorId, Arrays.asList(dispatcher(dispatcher)), checkConfirmationExpirationInterval, confirmationExpiration)));
 
     StateTypeStateStoreMap.stateTypeToStoreName(Entity1.class, StoreName);
   }

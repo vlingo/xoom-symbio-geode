@@ -7,6 +7,7 @@
 package io.vlingo.symbio.store.state.geode;
 
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -53,7 +54,7 @@ public class GeodeStateStoreActor extends Actor implements StateStore {
   public static final long CONFIRMATION_EXPIRATION_DEFAULT = 1000L;
 
   private final String originatorId;
-  private final Dispatcher<GeodeDispatchable<ObjectState<Object>>> dispatcher;
+  private final List<Dispatcher<GeodeDispatchable<ObjectState<Object>>>> dispatchers;
   private final DispatcherControl dispatcherControl;
   private final Map<String,StateStoreEntryReader<?>> entryReaders;
   private final EntryAdapterProvider entryAdapterProvider;
@@ -67,16 +68,19 @@ public class GeodeStateStoreActor extends Actor implements StateStore {
   }
 
   @SuppressWarnings({ "unchecked", "rawtypes" })
-  public GeodeStateStoreActor(final String originatorId, final Dispatcher<GeodeDispatchable<ObjectState<Object>>> dispatcher,
-          long checkConfirmationExpirationInterval, final long confirmationExpiration) {
+  public GeodeStateStoreActor(
+          final String originatorId,
+          final List<Dispatcher<GeodeDispatchable<ObjectState<Object>>>> dispatchers,
+          long checkConfirmationExpirationInterval,
+          final long confirmationExpiration) {
 
     if (originatorId == null)
       throw new IllegalArgumentException("originatorId must not be null.");
     this.originatorId = originatorId;
 
-    if (dispatcher == null)
+    if (dispatchers == null)
       throw new IllegalArgumentException("dispatcher must not be null.");
-    this.dispatcher = dispatcher;
+    this.dispatchers = dispatchers;
 
     this.entryReaders = new HashMap<>();
 
@@ -88,8 +92,16 @@ public class GeodeStateStoreActor extends Actor implements StateStore {
       DispatcherControl.class,
       Definition.has(
         DispatcherControlActor.class,
-        new DispatcherControlInstantiator(dispatcher, controlDelegate, checkConfirmationExpirationInterval, confirmationExpiration))
+        new DispatcherControlInstantiator(dispatchers, controlDelegate, checkConfirmationExpirationInterval, confirmationExpiration))
     );
+  }
+
+  public GeodeStateStoreActor(
+          final String originatorId,
+          final Dispatcher<GeodeDispatchable<ObjectState<Object>>> dispatcher,
+          long checkConfirmationExpirationInterval,
+          final long confirmationExpiration) {
+    this(originatorId, Arrays.asList(dispatcher), checkConfirmationExpirationInterval, confirmationExpiration);
   }
 
   @Override
@@ -101,7 +113,7 @@ public class GeodeStateStoreActor extends Actor implements StateStore {
   }
 
   protected void dispatch(final String dispatchId, final ObjectState<Object> state, final List<Entry<?>> entries) {
-    dispatcher.dispatch(new GeodeDispatchable<>(originatorId, LocalDateTime.now(), dispatchId, state, entries));
+    dispatchers.forEach(d -> d.dispatch(new GeodeDispatchable<>(originatorId, LocalDateTime.now(), dispatchId, state, entries)));
   }
 
   /*
@@ -287,24 +299,24 @@ public class GeodeStateStoreActor extends Actor implements StateStore {
 
   public static class GeodeStateStoreInstantiator implements ActorInstantiator<GeodeStateStoreActor> {
     private final String originatorId;
-    private final Dispatcher<GeodeDispatchable<ObjectState<Object>>> dispatcher;
+    private final List<Dispatcher<GeodeDispatchable<ObjectState<Object>>>> dispatchers;
     private final long checkConfirmationExpirationInterval;
     private final long confirmationExpiration;
 
     public GeodeStateStoreInstantiator(
             final String originatorId,
-            final Dispatcher<GeodeDispatchable<ObjectState<Object>>> dispatcher,
+            final List<Dispatcher<GeodeDispatchable<ObjectState<Object>>>> dispatchers,
             final long checkConfirmationExpirationInterval,
             final long confirmationExpiration) {
       this.originatorId = originatorId;
-      this.dispatcher = dispatcher;
+      this.dispatchers = dispatchers;
       this.checkConfirmationExpirationInterval = checkConfirmationExpirationInterval;
       this.confirmationExpiration = confirmationExpiration;
     }
 
     @Override
     public GeodeStateStoreActor instantiate() {
-      return new GeodeStateStoreActor(originatorId, dispatcher, checkConfirmationExpirationInterval, confirmationExpiration);
+      return new GeodeStateStoreActor(originatorId, dispatchers, checkConfirmationExpirationInterval, confirmationExpiration);
     }
 
     @Override
