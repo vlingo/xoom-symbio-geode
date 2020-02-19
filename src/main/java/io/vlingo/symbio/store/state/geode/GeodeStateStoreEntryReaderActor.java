@@ -74,6 +74,8 @@ public class GeodeStateStoreEntryReaderActor<T extends Entry<?>> extends Actor i
   }
 
   public static class GeodeStateStoreEntryReaderInstantiator<T extends Entry<?>> implements ActorInstantiator<GeodeStateStoreEntryReaderActor<T>> {
+    private static final long serialVersionUID = 266954179434375620L;
+
     private final EntryReader.Advice advice;
     private final String name;
 
