@@ -298,6 +298,8 @@ public class GeodeStateStoreActor extends Actor implements StateStore {
   }
 
   public static class GeodeStateStoreInstantiator implements ActorInstantiator<GeodeStateStoreActor> {
+    private static final long serialVersionUID = 950661758247574005L;
+
     private final String originatorId;
     private final List<Dispatcher<GeodeDispatchable<ObjectState<Object>>>> dispatchers;
     private final long checkConfirmationExpirationInterval;
