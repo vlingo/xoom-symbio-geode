@@ -28,6 +28,8 @@ public interface IDGenerator<T> {
   Completes<T> next(final String sequenceName);
 
   static class LongIDGeneratorInstantiator implements ActorInstantiator<LongIDGeneratorActor> {
+    private static final long serialVersionUID = 7401987097615842523L;
+
     private final long startingWithId;
 
     public LongIDGeneratorInstantiator(final long startingWithId) {
