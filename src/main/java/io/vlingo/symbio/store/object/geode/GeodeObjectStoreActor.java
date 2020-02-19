@@ -241,6 +241,8 @@ public class GeodeObjectStoreActor extends Actor implements ObjectStore {
   }
 
   public static class GeodeObjectStoreInstantiator implements ActorInstantiator<GeodeObjectStoreActor> {
+    private static final long serialVersionUID = -3188258223382398545L;
+
     private final String originatorId;
     private final GeodeObjectStoreDelegate delegate;
     private final Dispatcher<GeodeDispatchable<State<?>>> dispatcher;
