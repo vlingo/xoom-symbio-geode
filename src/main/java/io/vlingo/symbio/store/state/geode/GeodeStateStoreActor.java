@@ -22,6 +22,7 @@ import io.vlingo.actors.Definition;
 import io.vlingo.common.Completes;
 import io.vlingo.common.Failure;
 import io.vlingo.common.Success;
+import io.vlingo.reactivestreams.Stream;
 import io.vlingo.symbio.Entry;
 import io.vlingo.symbio.EntryAdapterProvider;
 import io.vlingo.symbio.Metadata;
@@ -30,6 +31,7 @@ import io.vlingo.symbio.State;
 import io.vlingo.symbio.State.ObjectState;
 import io.vlingo.symbio.StateAdapterProvider;
 import io.vlingo.symbio.store.EntryReader;
+import io.vlingo.symbio.store.QueryExpression;
 import io.vlingo.symbio.store.Result;
 import io.vlingo.symbio.store.StorageException;
 import io.vlingo.symbio.store.common.geode.GemFireCacheProvider;
@@ -202,6 +204,18 @@ public class GeodeStateStoreActor extends Actor implements StateStore {
   @Override
   public <S,C> void write(final String id, final S state, final int stateVersion, final List<Source<C>> sources, final Metadata metadata, final WriteResultInterest interest, final Object object) {
     writeWith(id, state, stateVersion, sources, metadata, interest, object);
+  }
+
+  @Override
+  public Completes<Stream> streamAllOf(final Class<?> stateType) {
+    // TODO: Implement
+    return null;
+  }
+
+  @Override
+  public Completes<Stream> streamSomeUsing(final QueryExpression query) {
+    // TODO: Implement
+    return null;
   }
 
   private <S,C> void writeWith(final String id, final S state, final int stateVersion, final List<Source<C>> sources, final Metadata metadata, final WriteResultInterest interest, final Object object) {

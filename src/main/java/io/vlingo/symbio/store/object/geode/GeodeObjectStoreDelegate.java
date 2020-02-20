@@ -28,6 +28,7 @@ import io.vlingo.symbio.Entry;
 import io.vlingo.symbio.Metadata;
 import io.vlingo.symbio.State;
 import io.vlingo.symbio.StateAdapterProvider;
+import io.vlingo.symbio.store.QueryExpression;
 import io.vlingo.symbio.store.Result;
 import io.vlingo.symbio.store.StorageException;
 import io.vlingo.symbio.store.common.geode.GemFireCacheProvider;
@@ -41,7 +42,6 @@ import io.vlingo.symbio.store.dispatch.Dispatchable;
 import io.vlingo.symbio.store.object.ObjectStoreDelegate;
 import io.vlingo.symbio.store.object.ObjectStoreReader.QueryMultiResults;
 import io.vlingo.symbio.store.object.ObjectStoreReader.QuerySingleResult;
-import io.vlingo.symbio.store.object.QueryExpression;
 import io.vlingo.symbio.store.object.StateObject;
 import io.vlingo.symbio.store.object.StateObjectMapper;
 /**
