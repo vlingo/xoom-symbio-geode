@@ -11,6 +11,7 @@ import java.util.List;
 import io.vlingo.actors.Actor;
 import io.vlingo.actors.ActorInstantiator;
 import io.vlingo.common.Completes;
+import io.vlingo.reactivestreams.Stream;
 import io.vlingo.symbio.Entry;
 import io.vlingo.symbio.store.EntryReader;
 import io.vlingo.symbio.store.state.StateStoreEntryReader;
@@ -70,6 +71,11 @@ public class GeodeStateStoreEntryReaderActor<T extends Entry<?>> extends Actor i
   @Override
   public Completes<Long> size() {
     // TODO Auto-generated method stub
+    return null;
+  }
+
+  @Override
+  public Completes<Stream> streamAll() {
     return null;
   }
 
