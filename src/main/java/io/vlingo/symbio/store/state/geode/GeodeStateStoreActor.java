@@ -127,7 +127,7 @@ public class GeodeStateStoreActor extends Actor implements StateStore {
     StateStoreEntryReader<?> reader = entryReaders.get(name);
     if (reader == null) {
       final EntryReader.Advice advice =
-              new EntryReader.Advice(null, GeodeStateStoreEntryReaderActor.class,  null, null, null, null, null);
+              new EntryReader.Advice(null, GeodeStateStoreEntryReaderActor.class,  null, null, null, null, null, null);
       reader = childActorFor(StateStoreEntryReader.class, Definition.has(advice.entryReaderClass, new GeodeStateStoreEntryReaderInstantiator<>(advice, name)));
       entryReaders.put(name, reader);
     }
