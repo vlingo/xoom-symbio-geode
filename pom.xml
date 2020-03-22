@@ -12,20 +12,6 @@
       <url>https://mozilla.org/MPL/2.0/</url>
     </license>
   </licenses>
-  <developers>
-    <developer>
-      <name>Dave Muirhead</name>
-      <email>dave@brsg.io</email>
-      <organization>Blue River Systems Group</organization>
-      <organizationUrl>http://brsg.io</organizationUrl>
-    </developer>
-    <developer>
-      <name>Vaughn Vernon</name>
-      <email>vaughn@kalele.io</email>
-      <organization>Kalele</organization>
-      <organizationUrl>http://kalele.io</organizationUrl>
-    </developer>
-  </developers>
   <scm>
     <connection>scm:git:git://github.com/vlingo/vlingo-symbio-geode.git</connection>
     <developerConnection>scm:git:ssh://github.com/vlingo/vlingo-symbio-geode.git</developerConnection>
