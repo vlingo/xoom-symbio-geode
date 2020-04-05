@@ -28,12 +28,7 @@ import org.apache.geode.cache.execute.FunctionService;
 import org.apache.geode.distributed.ConfigurationProperties;
 import org.apache.geode.test.dunit.rules.ClusterStartupRule;
 import org.apache.geode.test.dunit.rules.MemberVM;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.junit.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -82,6 +77,7 @@ public class GeodeObjectStoreIT {
   private GeodeObjectStoreDelegate storeDelegate;
 
   @Test
+  @Ignore
   public void testThatObjectStoreInsertsOneAndQueries() throws Exception {
     dispatcher.afterCompleting(1);
     final MockPersistResultInterest persistInterest = new MockPersistResultInterest();
