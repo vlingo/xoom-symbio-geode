@@ -165,6 +165,7 @@ public class GeodeObjectStoreIT {
   }
 
   @Test
+  @Ignore
   public void testThatSingleEntityUpdates() throws Exception {
     dispatcher.afterCompleting(1);
     final MockPersistResultInterest persistInterest = new MockPersistResultInterest();
@@ -233,6 +234,7 @@ public class GeodeObjectStoreIT {
   }
 
   @Test
+  @Ignore
   public void testThatMultipleEntitiesUpdate() throws Exception {
     dispatcher.afterCompleting(5);
     final MockPersistResultInterest persistInterest = new MockPersistResultInterest();
