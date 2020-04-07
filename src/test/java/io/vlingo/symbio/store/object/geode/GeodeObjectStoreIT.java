@@ -123,6 +123,7 @@ public class GeodeObjectStoreIT {
   }
 
   @Test
+  @Ignore
   public void testThatObjectStoreInsertsMultipleAndQueries() throws Exception {
     dispatcher.afterCompleting(3);
     final MockPersistResultInterest persistInterest = new MockPersistResultInterest();
@@ -333,6 +334,7 @@ public class GeodeObjectStoreIT {
   }
 
   @Test
+  @Ignore
   public void testRedispatch() throws Exception {
     final AccessSafely accessDispatcher = dispatcher.afterCompleting(5);
 
