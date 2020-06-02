@@ -2,7 +2,9 @@
 
 [![Javadocs](http://javadoc.io/badge/io.vlingo/vlingo-symbio-geode.svg?color=brightgreen)](http://javadoc.io/doc/io.vlingo/vlingo-symbio-geode) [![Build Status](https://travis-ci.org/vlingo/vlingo-symbio-geode.svg?branch=master)](https://travis-ci.org/vlingo/vlingo-symbio-geode) [ ![Download](https://api.bintray.com/packages/vlingo/vlingo-platform-java/vlingo-symbio-geode/images/download.svg) ](https://bintray.com/vlingo/vlingo-platform-java/vlingo-symbio-geode/_latestVersion) [![Gitter chat](https://badges.gitter.im/gitterHQ/gitter.png)](https://gitter.im/vlingo-platform-java/symbio)
 
-The vlingo/PLATFORM implementation of vlingo/symbio for Apache Geode providing reactive storage for services and applications.
+The VLINGO/PLATFORM implementation of VLINGO/SYMBIO for Apache Geode providing reactive storage for services and applications.
+
+Docs: https://docs.vlingo.io/vlingo-symbio
 
 Supports Apache Geode transations, State Storage (K-V) and Object Storage, but with `Source<T>` / `Entry<T>` for `DomainEvent` and `Command` journaling.
 
@@ -30,13 +32,13 @@ See `GeodeObjectStoreActor`
     <dependency>
       <groupId>io.vlingo</groupId>
       <artifactId>vlingo-symbio</artifactId>
-      <version>1.2.9</version>
+      <version>1.3.0</version>
       <scope>compile</scope>
     </dependency>
     <dependency>
       <groupId>io.vlingo</groupId>
       <artifactId>vlingo-symbio-geode</artifactId>
-      <version>1.2.9</version>
+      <version>1.3.0</version>
       <scope>compile</scope>
     </dependency>
   </dependencies>
@@ -44,8 +46,8 @@ See `GeodeObjectStoreActor`
 
 ```gradle
 dependencies {
-    compile 'io.vlingo:vlingo-symbio:1.2.9'
-    compile 'io.vlingo:vlingo-symbio-geode:1.2.9'
+    compile 'io.vlingo:vlingo-symbio:1.3.0'
+    compile 'io.vlingo:vlingo-symbio-geode:1.3.0'
 }
 
 repositories {
