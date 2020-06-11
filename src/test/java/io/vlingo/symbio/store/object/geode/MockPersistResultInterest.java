@@ -20,7 +20,7 @@ import io.vlingo.symbio.store.object.ObjectStoreWriter.PersistResultInterest;
 public class MockPersistResultInterest implements PersistResultInterest {
 
   private AccessSafely access;
-  
+
   public AtomicReference<Exception> persistCause = new AtomicReference<>();
   public AtomicReference<Result> persistResult = new AtomicReference<>();
   public AtomicReference<Object> persistedObject = new AtomicReference<>();
@@ -31,11 +31,11 @@ public class MockPersistResultInterest implements PersistResultInterest {
   @Override
   public void persistResultedIn(
           final Outcome<StorageException, Result> outcome,
-          final Object persistentObject, 
-          final int expected, 
-          final int actual, 
+          final Object persistentObject,
+          final int expected,
+          final int actual,
           final Object object) {
-    
+
     outcome
       .andThen(result -> {
         access.writeUsing("persistObjectData", new StoreData(null, result, persistentObject, expected, actual));
@@ -72,7 +72,7 @@ public class MockPersistResultInterest implements PersistResultInterest {
     public final Object persistedObject;
     public final int expected;
     public final int actual;
-    
+
     public StoreData(Exception errorCauses, Result result, Object persistedObject, int expected, int actual) {
       super();
       this.errorCauses = errorCauses;

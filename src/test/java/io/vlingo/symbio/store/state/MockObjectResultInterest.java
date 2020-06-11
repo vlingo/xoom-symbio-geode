@@ -7,6 +7,13 @@
 
 package io.vlingo.symbio.store.state;
 
+import java.util.Collection;
+import java.util.List;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
+
 import io.vlingo.actors.testkit.AccessSafely;
 import io.vlingo.common.Outcome;
 import io.vlingo.symbio.Metadata;
@@ -15,12 +22,8 @@ import io.vlingo.symbio.store.Result;
 import io.vlingo.symbio.store.StorageException;
 import io.vlingo.symbio.store.dispatch.ConfirmDispatchedResultInterest;
 import io.vlingo.symbio.store.state.StateStore.ReadResultInterest;
+import io.vlingo.symbio.store.state.StateStore.TypedStateBundle;
 import io.vlingo.symbio.store.state.StateStore.WriteResultInterest;
-
-import java.util.List;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
 
 public class MockObjectResultInterest
     implements ReadResultInterest,
@@ -39,6 +42,8 @@ public class MockObjectResultInterest
   public AtomicReference<Object> objectState = new AtomicReference<>();
   public ConcurrentLinkedQueue<Exception> errorCauses = new ConcurrentLinkedQueue<>();
   public AtomicReference<Metadata> metadataHolder = new AtomicReference<>();
+  public CopyOnWriteArrayList<StoreData> readAllStates = new CopyOnWriteArrayList<>();
+  public AtomicInteger totalWrites = new AtomicInteger(0);
 
   public MockObjectResultInterest() {
   }
@@ -59,6 +64,23 @@ public class MockObjectResultInterest
         access.writeUsing("readStoreData", new StoreData(1, cause.result, state, metadata, cause));
         return cause.result;
       });
+  }
+
+  @Override
+  public <S> void readResultedIn(final Outcome<StorageException, Result> outcome, final Collection<TypedStateBundle> bundles, final Object object) {
+    outcome
+    .andThen(result -> {
+      for (final TypedStateBundle bundle : bundles) {
+        access.writeUsing("readAllStates", new StoreData(1, result, bundle.state, bundle.metadata, null));
+      }
+      return result;
+    })
+    .otherwise(cause -> {
+      for (final TypedStateBundle bundle : bundles) {
+        access.writeUsing("readAllStates", new StoreData(1, cause.result, bundle.state, bundle.metadata, cause));
+      }
+      return cause.result;
+    });
   }
 
   @Override
@@ -83,6 +105,7 @@ public class MockObjectResultInterest
       .readingWith("confirmDispatchedResultedIn", () -> confirmDispatchedResultedIn.get())
 
       .writingWith("writeStoreData", (StoreData data) -> {
+        totalWrites.incrementAndGet();
         writeObjectResultedIn.addAndGet(data.resultedIn);
         objectWriteResult.set(data.result);
         objectWriteAccumulatedResults.add(data.result);
@@ -102,7 +125,15 @@ public class MockObjectResultInterest
           errorCauses.add(data.errorCauses);
         }
       })
+      .writingWith("readAllStates", (StoreData data) -> {
+        readAllStates.add(data);
+        metadataHolder.set(data.metadata);
+        if (data.errorCauses != null) {
+          errorCauses.add(data.errorCauses);
+        }
+      })
 
+      .readingWith("totalWrites", () -> totalWrites.get())
       .readingWith("readObjectResultedIn", () -> readObjectResultedIn.get())
       .readingWith("objectReadResult", () -> objectReadResult.get())
       .readingWith("objectWriteResult", () -> objectWriteResult.get())
@@ -112,12 +143,13 @@ public class MockObjectResultInterest
       .readingWith("objectState", () -> objectState.get())
       .readingWith("errorCauses", () -> errorCauses.poll())
       .readingWith("errorCausesCount", () -> errorCauses.size())
-      .readingWith("writeObjectResultedIn", () -> writeObjectResultedIn.get());
+      .readingWith("writeObjectResultedIn", () -> writeObjectResultedIn.get())
+      .readingWith("readAllStates", () -> readAllStates);
 
     return access;
   }
 
-  public class StoreData {
+  public static class StoreData {
     public final Exception errorCauses;
     public final Metadata metadata;
     public final Result result;
@@ -130,6 +162,11 @@ public class MockObjectResultInterest
       this.state = state;
       this.metadata = metadata;
       this.errorCauses = errorCauses;
+    }
+
+    @SuppressWarnings("unchecked")
+    public <T> T typedState() {
+      return (T) state;
     }
   }
 }

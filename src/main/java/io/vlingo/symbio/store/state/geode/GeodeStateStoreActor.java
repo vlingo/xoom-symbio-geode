@@ -8,6 +8,7 @@ package io.vlingo.symbio.store.state.geode;
 
 import java.time.LocalDateTime;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -21,6 +22,7 @@ import io.vlingo.actors.ActorInstantiator;
 import io.vlingo.actors.Definition;
 import io.vlingo.common.Completes;
 import io.vlingo.common.Failure;
+import io.vlingo.common.Outcome;
 import io.vlingo.common.Success;
 import io.vlingo.reactivestreams.Stream;
 import io.vlingo.symbio.Entry;
@@ -61,6 +63,7 @@ public class GeodeStateStoreActor extends Actor implements StateStore {
   private final Map<String,StateStoreEntryReader<?>> entryReaders;
   private final EntryAdapterProvider entryAdapterProvider;
   private final StateAdapterProvider stateAdapterProvider;
+  private final ReadAllResultCollector readAllResultCollector;
 
   public GeodeStateStoreActor(final String originatorId, final Dispatcher<GeodeDispatchable<ObjectState<Object>>> dispatcher) {
     this(originatorId,
@@ -88,6 +91,7 @@ public class GeodeStateStoreActor extends Actor implements StateStore {
 
     this.entryAdapterProvider = EntryAdapterProvider.instance(stage().world());
     this.stateAdapterProvider = StateAdapterProvider.instance(stage().world());
+    this.readAllResultCollector = new ReadAllResultCollector();
 
     final GeodeDispatcherControlDelegate controlDelegate = new GeodeDispatcherControlDelegate(originatorId);
     dispatcherControl = stage().actorFor(
@@ -140,6 +144,19 @@ public class GeodeStateStoreActor extends Actor implements StateStore {
   @Override
   public void read(final String id, final Class<?> type, final ReadResultInterest interest, final Object object) {
     readFor(id, type, interest, object);
+  }
+
+  @Override
+  public void readAll(final Collection<TypedStateBundle> bundles, final ReadResultInterest interest, final Object object) {
+    readAllResultCollector.prepare();
+
+    for (final TypedStateBundle bundle : bundles) {
+      readFor(bundle.id, bundle.type, readAllResultCollector, null);
+    }
+
+    final Outcome<StorageException, Result> outcome = readAllResultCollector.readResultOutcome(bundles.size());
+
+    interest.readResultedIn(outcome, readAllResultCollector.readResultBundles(), object);
   }
 
   private void readFor(final String id, final Class<?> type, final ReadResultInterest interest, final Object object) {
