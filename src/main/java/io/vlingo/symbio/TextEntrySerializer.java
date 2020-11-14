@@ -6,6 +6,7 @@
 // one at https://mozilla.org/MPL/2.0/.
 package io.vlingo.symbio;
 
+import io.vlingo.symbio.store.StoredTypes;
 import org.apache.geode.pdx.PdxReader;
 import org.apache.geode.pdx.PdxSerializationException;
 import org.apache.geode.pdx.PdxSerializer;
@@ -41,13 +42,13 @@ public class TextEntrySerializer implements PdxSerializer {
   }
 
   private Class<?> computeType(final String typeFQCN) {
-    if (typeFQCN == null  || typeFQCN.isEmpty())
+    if (typeFQCN == null || typeFQCN.isEmpty())
       throw new PdxSerializationException(getClass().getName() + ".computeType - cannot compute type because typeFQCN is null or empty");
     try {
-      return Class.forName(typeFQCN);
+      return StoredTypes.forName(typeFQCN);
     }
     catch (Throwable t) {
-      throw new PdxSerializationException(getClass().getName() + ".computeType - error executing Class.forName(" + typeFQCN + ")", t);
+      throw new PdxSerializationException(getClass().getName() + ".computeType - error executing StoredTypes.forName(" + typeFQCN + ")", t);
     }
   }
 }

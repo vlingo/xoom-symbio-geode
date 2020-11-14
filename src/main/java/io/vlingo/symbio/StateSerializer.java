@@ -1,5 +1,6 @@
 package io.vlingo.symbio;
 
+import io.vlingo.symbio.store.StoredTypes;
 import org.apache.geode.pdx.PdxReader;
 import org.apache.geode.pdx.PdxSerializationException;
 import org.apache.geode.pdx.PdxSerializer;
@@ -70,7 +71,7 @@ public class StateSerializer implements PdxSerializer {
 
   private Class<?> computeType(final String typeFQCN) {
     try {
-      return Class.forName(typeFQCN);
+      return StoredTypes.forName(typeFQCN);
     }
     catch (Throwable t) {
       throw new PdxSerializationException("error loading class " + typeFQCN, t);
