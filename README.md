@@ -1,6 +1,6 @@
 # vlingo-symbio-geode
 
-[![Javadocs](http://javadoc.io/badge/io.vlingo/vlingo-symbio-geode.svg?color=brightgreen)](http://javadoc.io/doc/io.vlingo/vlingo-symbio-geode) [![Build Status](https://travis-ci.org/vlingo/vlingo-symbio-geode.svg?branch=master)](https://travis-ci.org/vlingo/vlingo-symbio-geode) [ ![Download](https://api.bintray.com/packages/vlingo/vlingo-platform-java/vlingo-symbio-geode/images/download.svg) ](https://bintray.com/vlingo/vlingo-platform-java/vlingo-symbio-geode/_latestVersion) [![Gitter chat](https://badges.gitter.im/gitterHQ/gitter.png)](https://gitter.im/vlingo-platform-java/symbio)
+[![Javadocs](http://javadoc.io/badge/io.vlingo/vlingo-symbio-geode.svg?color=brightgreen)](http://javadoc.io/doc/io.vlingo/vlingo-symbio-geode) [![Build](https://github.com/vlingo/vlingo-symbio-geode/workflows/Build/badge.svg)](https://github.com/vlingo/vlingo-symbio-geode/actions?query=workflow%3ABuild) [ ![Download](https://api.bintray.com/packages/vlingo/vlingo-platform-java/vlingo-symbio-geode/images/download.svg) ](https://bintray.com/vlingo/vlingo-platform-java/vlingo-symbio-geode/_latestVersion) [![Gitter chat](https://badges.gitter.im/gitterHQ/gitter.png)](https://gitter.im/vlingo-platform-java/symbio)
 
 The VLINGO/PLATFORM implementation of VLINGO/SYMBIO for Apache Geode providing reactive storage for services and applications.
 
