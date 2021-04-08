@@ -1,10 +1,10 @@
-# vlingo-symbio-geode
+# xoom-symbio-geode
 
-[![Javadocs](http://javadoc.io/badge/io.vlingo/vlingo-symbio-geode.svg?color=brightgreen)](http://javadoc.io/doc/io.vlingo/vlingo-symbio-geode) [![Build](https://github.com/vlingo/vlingo-symbio-geode/workflows/Build/badge.svg)](https://github.com/vlingo/vlingo-symbio-geode/actions?query=workflow%3ABuild) [![Download](https://img.shields.io/maven-central/v/io.vlingo/vlingo-symbio-geode?label=maven)](https://search.maven.org/artifact/io.vlingo/vlingo-symbio-geode) [![Gitter chat](https://badges.gitter.im/gitterHQ/gitter.png)](https://gitter.im/vlingo-platform-java/symbio)
+[![Javadocs](http://javadoc.io/badge/io.vlingo.xoom/xoom-symbio-geode.svg?color=brightgreen)](http://javadoc.io/doc/io.vlingo.xoom/xoom-symbio-geode) [![Build](https://github.com/vlingo/xoom-symbio-geode/workflows/Build/badge.svg)](https://github.com/vlingo/xoom-symbio-geode/actions?query=workflow%3ABuild) [![Download](https://img.shields.io/maven-central/v/io.vlingo.xoom/xoom-symbio-geode?label=maven)](https://search.maven.org/artifact/io.vlingo.xoom/xoom-symbio-geode) [![Gitter chat](https://badges.gitter.im/gitterHQ/gitter.png)](https://gitter.im/vlingo-platform-java/symbio)
 
 The VLINGO XOOM platform SDK implementation of XOOM SYMBIO for Apache Geode, providing reactive storage for services and applications.
 
-Docs: https://docs.vlingo.io/vlingo-symbio
+Docs: https://docs.vlingo.io/xoom-symbio
 
 Supports Apache Geode transations, State Storage (Key-Value) and Object Storage, but with `Source<T>` / `Entry<T>` for `DomainEvent` and `Command` journaling.
 
@@ -23,14 +23,14 @@ See `GeodeObjectStoreActor`
 ```xml
   <dependencies>
     <dependency>
-      <groupId>io.vlingo</groupId>
-      <artifactId>vlingo-symbio</artifactId>
+      <groupId>io.vlingo.xoom</groupId>
+      <artifactId>xoom-symbio</artifactId>
       <version>1.6.0</version>
       <scope>compile</scope>
     </dependency>
     <dependency>
-      <groupId>io.vlingo</groupId>
-      <artifactId>vlingo-symbio-geode</artifactId>
+      <groupId>io.vlingo.xoom</groupId>
+      <artifactId>xoom-symbio-geode</artifactId>
       <version>1.6.0</version>
       <scope>compile</scope>
     </dependency>
@@ -39,8 +39,8 @@ See `GeodeObjectStoreActor`
 
 ```gradle
 dependencies {
-    compile 'io.vlingo:vlingo-symbio:1.6.0'
-    compile 'io.vlingo:vlingo-symbio-geode:1.6.0'
+    compile 'io.vlingo.xoom:xoom-symbio:1.6.0'
+    compile 'io.vlingo.xoom:xoom-symbio-geode:1.6.0'
 }
 ```
 
