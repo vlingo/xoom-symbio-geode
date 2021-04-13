@@ -1,4 +1,4 @@
-## How to contribute to the vlingo/symbio-gemfire
+## How to contribute to the VLINGO XOOM Symbio Gemfire
 
 #### **Did you find a bug?**
 
@@ -36,4 +36,4 @@
 
 Thanks for your kind assistance! :smile:
 
-Vaughn Vernon and the vlingo/platform team
+Vaughn Vernon and the VLINGO XOOM Team
