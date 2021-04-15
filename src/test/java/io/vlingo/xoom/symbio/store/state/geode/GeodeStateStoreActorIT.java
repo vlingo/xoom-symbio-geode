@@ -23,11 +23,7 @@ import org.apache.geode.cache.execute.FunctionService;
 import org.apache.geode.distributed.ConfigurationProperties;
 import org.apache.geode.test.dunit.rules.ClusterStartupRule;
 import org.apache.geode.test.dunit.rules.MemberVM;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.junit.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -60,6 +56,7 @@ import io.vlingo.xoom.symbio.store.state.geode.GeodeStateStoreActor.GeodeStateSt
 /**
  * GemFireStateStoreTest is responsible for testing {@link GeodeStateStoreActor}.
  */
+@Ignore
 public class GeodeStateStoreActorIT {
   private static final Logger LOG = LoggerFactory.getLogger(GeodeStateStoreActorIT.class);
   private final static String StoreName = Entity1.class.getSimpleName();

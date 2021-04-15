@@ -18,11 +18,7 @@ import org.apache.geode.cache.execute.FunctionService;
 import org.apache.geode.distributed.ConfigurationProperties;
 import org.apache.geode.test.dunit.rules.ClusterStartupRule;
 import org.apache.geode.test.dunit.rules.MemberVM;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.junit.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,6 +35,7 @@ import io.vlingo.xoom.symbio.store.common.geode.identity.LongSequence;
  * LongIDGeneratorIT
  */
 @SuppressWarnings("unchecked")
+@Ignore
 public class LongIDGeneratorIT {
 
   private static final Logger LOG = LoggerFactory.getLogger(LongIDGeneratorIT.class);
