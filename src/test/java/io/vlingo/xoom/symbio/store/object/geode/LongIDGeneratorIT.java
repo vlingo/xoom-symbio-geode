@@ -35,7 +35,6 @@ import io.vlingo.xoom.symbio.store.common.geode.identity.LongSequence;
  * LongIDGeneratorIT
  */
 @SuppressWarnings("unchecked")
-@Ignore
 public class LongIDGeneratorIT {
 
   private static final Logger LOG = LoggerFactory.getLogger(LongIDGeneratorIT.class);

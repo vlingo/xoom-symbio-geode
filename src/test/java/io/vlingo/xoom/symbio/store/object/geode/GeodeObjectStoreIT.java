@@ -77,7 +77,6 @@ public class GeodeObjectStoreIT {
   private GeodeObjectStoreDelegate storeDelegate;
 
   @Test
-  @Ignore
   public void testThatObjectStoreInsertsOneAndQueries() throws Exception {
     dispatcher.afterCompleting(1);
     final MockPersistResultInterest persistInterest = new MockPersistResultInterest();
@@ -123,7 +122,6 @@ public class GeodeObjectStoreIT {
   }
 
   @Test
-  @Ignore
   public void testThatObjectStoreInsertsMultipleAndQueries() throws Exception {
     dispatcher.afterCompleting(3);
     final MockPersistResultInterest persistInterest = new MockPersistResultInterest();
@@ -166,7 +164,6 @@ public class GeodeObjectStoreIT {
   }
 
   @Test
-  @Ignore
   public void testThatSingleEntityUpdates() throws Exception {
     dispatcher.afterCompleting(1);
     final MockPersistResultInterest persistInterest = new MockPersistResultInterest();
@@ -235,7 +232,6 @@ public class GeodeObjectStoreIT {
   }
 
   @Test
-  @Ignore
   public void testThatMultipleEntitiesUpdate() throws Exception {
     dispatcher.afterCompleting(5);
     final MockPersistResultInterest persistInterest = new MockPersistResultInterest();
@@ -334,7 +330,6 @@ public class GeodeObjectStoreIT {
   }
 
   @Test
-  @Ignore
   public void testRedispatch() throws Exception {
     final AccessSafely accessDispatcher = dispatcher.afterCompleting(5);
 
