@@ -25,13 +25,13 @@ See `GeodeObjectStoreActor`
     <dependency>
       <groupId>io.vlingo.xoom</groupId>
       <artifactId>xoom-symbio</artifactId>
-      <version>1.7.6</version>
+      <version>1.7.7</version>
       <scope>compile</scope>
     </dependency>
     <dependency>
       <groupId>io.vlingo.xoom</groupId>
       <artifactId>xoom-symbio-geode</artifactId>
-      <version>1.7.6</version>
+      <version>1.7.7</version>
       <scope>compile</scope>
     </dependency>
   </dependencies>
@@ -39,8 +39,8 @@ See `GeodeObjectStoreActor`
 
 ```gradle
 dependencies {
-    compile 'io.vlingo.xoom:xoom-symbio:1.7.6'
-    compile 'io.vlingo.xoom:xoom-symbio-geode:1.7.6'
+    compile 'io.vlingo.xoom:xoom-symbio:1.7.7'
+    compile 'io.vlingo.xoom:xoom-symbio-geode:1.7.7'
 }
 ```
 
