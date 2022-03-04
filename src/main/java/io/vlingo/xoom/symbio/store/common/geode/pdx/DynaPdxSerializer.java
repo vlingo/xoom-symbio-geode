@@ -52,7 +52,7 @@ public class DynaPdxSerializer implements PdxSerializer, Declarable {
   public void initialize(Cache cache, Properties properties) {
     final String providerFQCN = properties.getProperty(PROVIDER_PROPERTY_NAME);
     try {
-      provider = (PdxSerializerProvider) Class.forName(providerFQCN).newInstance();
+      provider = (PdxSerializerProvider) Class.forName(providerFQCN).getDeclaredConstructor().newInstance();
     }
     catch (Throwable t) {
       LOG.error("unable to load configured PdxSerializerProvider: " + providerFQCN);
