@@ -53,14 +53,14 @@ public class LongIDGeneratorIT {
     String customerSeq = "test.Customer";
     String productSeq = "test.Product";
 
-    assertEquals("next customer ID is 1", new Long(1), generator.next(customerSeq));
-    assertEquals("next customer ID is 2", new Long(2), generator.next(customerSeq));
-    assertEquals("next product ID is 1", new Long(1), generator.next(productSeq));
-    assertEquals("next customer ID is 3", new Long(3), generator.next(customerSeq));
-    assertEquals("next customer ID is 4", new Long(4), generator.next(customerSeq));
-    assertEquals("next product ID is 2", new Long(2), generator.next(productSeq));
-    assertEquals("next customer ID is 5", new Long(5), generator.next(customerSeq));
-    assertEquals("next product ID is 3", new Long(3), generator.next(productSeq));
+    assertEquals("next customer ID is 1", Long.valueOf(1), generator.next(customerSeq));
+    assertEquals("next customer ID is 2", Long.valueOf(2), generator.next(customerSeq));
+    assertEquals("next product ID is 1", Long.valueOf(1), generator.next(productSeq));
+    assertEquals("next customer ID is 3", Long.valueOf(3), generator.next(customerSeq));
+    assertEquals("next customer ID is 4", Long.valueOf(4), generator.next(customerSeq));
+    assertEquals("next product ID is 2", Long.valueOf(2), generator.next(productSeq));
+    assertEquals("next customer ID is 5", Long.valueOf(5), generator.next(customerSeq));
+    assertEquals("next product ID is 3", Long.valueOf(3), generator.next(productSeq));
   }
 
   @Test
@@ -74,14 +74,14 @@ public class LongIDGeneratorIT {
     String customerSeq = "test.Customer";
     String productSeq = "test.Product";
 
-    assertEquals("next customer ID is 1", new Long(1), generator.next(customerSeq).await());
-    assertEquals("next customer ID is 2", new Long(2), generator.next(customerSeq).await());
-    assertEquals("next product ID is 1", new Long(1), generator.next(productSeq).await());
-    assertEquals("next customer ID is 3", new Long(3), generator.next(customerSeq).await());
-    assertEquals("next customer ID is 4", new Long(4), generator.next(customerSeq).await());
-    assertEquals("next product ID is 2", new Long(2), generator.next(productSeq).await());
-    assertEquals("next customer ID is 5", new Long(5), generator.next(customerSeq).await());
-    assertEquals("next product ID is 3", new Long(3), generator.next(productSeq).await());
+    assertEquals("next customer ID is 1", Long.valueOf(1), generator.next(customerSeq).await());
+    assertEquals("next customer ID is 2", Long.valueOf(2), generator.next(customerSeq).await());
+    assertEquals("next product ID is 1", Long.valueOf(1), generator.next(productSeq).await());
+    assertEquals("next customer ID is 3", Long.valueOf(3), generator.next(customerSeq).await());
+    assertEquals("next customer ID is 4", Long.valueOf(4), generator.next(customerSeq).await());
+    assertEquals("next product ID is 2", Long.valueOf(2), generator.next(productSeq).await());
+    assertEquals("next customer ID is 5", Long.valueOf(5), generator.next(customerSeq).await());
+    assertEquals("next product ID is 3", Long.valueOf(3), generator.next(productSeq).await());
   }
 
   @BeforeClass
