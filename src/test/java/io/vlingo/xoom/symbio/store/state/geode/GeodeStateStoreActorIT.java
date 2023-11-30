@@ -56,7 +56,6 @@ import io.vlingo.xoom.symbio.store.state.geode.GeodeStateStoreActor.GeodeStateSt
 /**
  * GemFireStateStoreTest is responsible for testing {@link GeodeStateStoreActor}.
  */
-@Ignore
 public class GeodeStateStoreActorIT {
   private static final Logger LOG = LoggerFactory.getLogger(GeodeStateStoreActorIT.class);
   private final static String StoreName = Entity1.class.getSimpleName();

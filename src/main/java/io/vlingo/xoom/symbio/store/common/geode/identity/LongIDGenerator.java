@@ -11,7 +11,6 @@ import org.apache.geode.cache.GemFireCache;
 import org.apache.geode.cache.Region;
 import org.apache.geode.cache.execute.FunctionService;
 import org.apache.geode.cache.execute.ResultCollector;
-import org.apache.logging.log4j.util.Strings;
 
 import java.util.*;
 /**
@@ -49,7 +48,7 @@ public class LongIDGenerator {
   
   public LongIDGenerator(final String sequenceRegionPath, final Long allocationSize) {
     super();
-    if (Strings.isBlank(sequenceRegionPath))
+    if (isBlank(sequenceRegionPath))
       throw new IllegalArgumentException("sequenceRegionPath is required");
     this.sequenceRegionPath = sequenceRegionPath;
     if (allocationSize == null)
@@ -57,6 +56,10 @@ public class LongIDGenerator {
     else
       this.allocationSize = allocationSize;
     this.allocationsByName = new HashMap<>();
+  }
+
+  boolean isBlank(String string) {
+    return string == null || string.isEmpty();
   }
   
   /**
